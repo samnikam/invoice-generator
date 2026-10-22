@@ -51,3 +51,20 @@ export function formatBasisPointsAsPercent(basisPoints: number): string {
     .replace(/0+$/, "");
   return fraction ? `${whole}.${fraction}` : String(whole);
 }
+
+/**
+ * Formats HALF of a rate as a percentage, e.g. for CGST and SGST labels:
+ * 1800 → "9", 500 → "2.5", 150 → "0.75", 25 → "0.125". Exact (no floating point).
+ */
+export function formatHalfRatePercent(basisPoints: number): string {
+  if (!Number.isSafeInteger(basisPoints) || basisPoints < 0) {
+    throw new RangeError(`Expected non-negative whole basis points, received ${basisPoints}`);
+  }
+  // Half a basis point is 0.005%, so work in thousandths of a percent: bp × 10 ÷ 2.
+  const thousandths = basisPoints * 5;
+  const whole = Math.trunc(thousandths / 1000);
+  const fraction = String(thousandths % 1000)
+    .padStart(3, "0")
+    .replace(/0+$/, "");
+  return fraction ? `${whole}.${fraction}` : String(whole);
+}

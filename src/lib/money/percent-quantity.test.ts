@@ -1,7 +1,12 @@
 import { describe, expect, it } from "vitest";
 
 import { InvalidInputError } from "@/lib/errors";
-import { asBasisPoints, formatBasisPointsAsPercent, parsePercent } from "@/lib/money/percent";
+import {
+  asBasisPoints,
+  formatBasisPointsAsPercent,
+  formatHalfRatePercent,
+  parsePercent,
+} from "@/lib/money/percent";
 import { formatQuantity, parseQuantity } from "@/lib/money/quantity";
 
 function codeOf(fn: () => unknown): string | undefined {
@@ -81,5 +86,24 @@ describe("parseQuantity", () => {
     [1, "0.001"],
   ])("formats %i thousandths as %j", (input, expected) => {
     expect(formatQuantity(input)).toBe(expected);
+  });
+});
+
+describe("formatHalfRatePercent (CGST/SGST label for each configured rate)", () => {
+  it.each([
+    [4000, "20"],
+    [1800, "9"],
+    [500, "2.5"],
+    [300, "1.5"],
+    [150, "0.75"],
+    [25, "0.125"],
+    [0, "0"],
+  ])("half of %i basis points is %j%%", (input, expected) => {
+    expect(formatHalfRatePercent(input)).toBe(expected);
+  });
+
+  it("rejects invalid input", () => {
+    expect(() => formatHalfRatePercent(12.5)).toThrow(RangeError);
+    expect(() => formatHalfRatePercent(-1)).toThrow(RangeError);
   });
 });

@@ -20,9 +20,11 @@ test.describe("landing page", () => {
     await expect(page.getByText("₹27,140.00")).toBeVisible();
   });
 
-  test("marks unfinished features as in development", async ({ page }) => {
+  test("marks unfinished features as in development and links available ones", async ({ page }) => {
     const featureSection = page.locator("#features");
-    await expect(featureSection.getByText("In development")).toHaveCount(4);
+    await expect(featureSection.getByText("In development")).toHaveCount(3);
+    await featureSection.getByRole("link", { name: "Open calculators" }).click();
+    await expect(page).toHaveURL(/\/calculators$/);
   });
 
   test("every link has a working destination", async ({ page }) => {

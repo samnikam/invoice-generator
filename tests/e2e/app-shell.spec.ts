@@ -10,8 +10,17 @@ test.describe("workspace shell", () => {
   test("dashboard shows honest tool status with no fake data", async ({ page }) => {
     await expect(page).toHaveTitle(/Dashboard \| SmartBill/);
     await expect(page.getByRole("heading", { level: 1 })).toContainText("Welcome to SmartBill");
-    await expect(page.getByRole("status")).toContainText("The first tools are being built");
-    await expect(page.getByRole("main").getByText("In development")).toHaveCount(4);
+    await expect(page.getByRole("status")).toContainText("3 tools are still being built");
+    await expect(page.getByRole("main").getByText("In development", { exact: true })).toHaveCount(
+      3,
+    );
+    await expect(page.getByRole("main").getByText("Available", { exact: true })).toHaveCount(1);
+  });
+
+  test("dashboard opens the calculators", async ({ page }) => {
+    await page.getByRole("main").getByRole("link", { name: "Open" }).click();
+    await expect(page).toHaveURL(/\/calculators$/);
+    await expect(page.getByRole("heading", { level: 1 })).toHaveText("Business calculators");
   });
 
   test("every link has a working destination", async ({ page }) => {
@@ -31,11 +40,15 @@ test.describe("workspace shell", () => {
       "aria-current",
       "page",
     );
-    for (const name of ["Invoices", "Quotations", "Receipts", "Calculators"]) {
+    for (const name of ["Invoices", "Quotations", "Receipts"]) {
       await expect(nav.getByRole("link", { name })).toHaveCount(0);
       await expect(nav.getByText(name)).toBeVisible();
     }
-    await expect(nav.getByText("Soon")).toHaveCount(4);
+    await expect(nav.getByText("Soon")).toHaveCount(3);
+    await expect(nav.getByRole("link", { name: "Calculators" })).toHaveAttribute(
+      "href",
+      "/calculators",
+    );
   });
 
   test("mobile menu opens, works with the keyboard, and closes", async ({ page }) => {

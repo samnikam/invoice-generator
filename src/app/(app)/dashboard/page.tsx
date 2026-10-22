@@ -12,7 +12,7 @@ export const metadata: Metadata = {
 };
 
 export default function DashboardPage() {
-  const availableCount = features.filter((f) => f.status === "available").length;
+  const inDevelopmentCount = features.filter((f) => f.status === "in-development").length;
 
   return (
     <div className="space-y-10">
@@ -25,17 +25,21 @@ export default function DashboardPage() {
         </p>
       </div>
 
-      {availableCount === 0 ? (
+      {inDevelopmentCount > 0 ? (
         <div
           role="status"
           className="flex gap-3 rounded-xl border border-primary/20 bg-accent/60 p-4 text-sm sm:p-5"
         >
           <Info aria-hidden="true" className="mt-0.5 size-5 shrink-0 text-primary" />
           <div>
-            <p className="font-medium text-foreground">The first tools are being built</p>
+            <p className="font-medium text-foreground">
+              {inDevelopmentCount === 1
+                ? "1 tool is still being built"
+                : `${inDevelopmentCount} tools are still being built`}
+            </p>
             <p className="mt-1 leading-relaxed text-muted-foreground">
-              {siteConfig.name} is in early preview. Each tool below will become available here once
-              its calculations and documents have been tested.
+              {siteConfig.name} is in early preview. Tools marked “In development” will become
+              available here once their calculations and documents have been tested.
             </p>
           </div>
         </div>

@@ -74,7 +74,8 @@ export const features: readonly Feature[] = [
       "Amount to words (Indian numbering)",
     ],
     icon: Calculator,
-    status: "in-development",
+    status: "available",
+    href: "/calculators",
   },
 ];
 
