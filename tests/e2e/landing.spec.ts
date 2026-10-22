@@ -22,7 +22,11 @@ test.describe("landing page", () => {
 
   test("marks unfinished features as in development and links available ones", async ({ page }) => {
     const featureSection = page.locator("#features");
-    await expect(featureSection.getByText("In development")).toHaveCount(3);
+    await expect(featureSection.getByText("In development")).toHaveCount(2);
+    await expect(featureSection.getByRole("link", { name: "Open invoices" })).toHaveAttribute(
+      "href",
+      "/invoices/new",
+    );
     await featureSection.getByRole("link", { name: "Open calculators" }).click();
     await expect(page).toHaveURL(/\/calculators$/);
   });

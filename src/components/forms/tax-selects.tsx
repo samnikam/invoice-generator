@@ -5,7 +5,7 @@ import { OUTSIDE_INDIA } from "@/lib/calculators/place-of-supply";
 import { GST_RATE_REVIEW, GST_RATES } from "@/lib/tax/gst-rates";
 import { ACTIVE_GST_STATES } from "@/lib/tax/states";
 
-import type { ControlProps } from "./form-field";
+import type { ControlProps } from "@/components/forms/form-field";
 
 type SelectProps = ControlProps & { value: string; onChange: (value: string) => void };
 

@@ -162,3 +162,18 @@
     @apply rounded-sm outline-2 outline-offset-2 outline-ring;
   }
 }
+
+/* Printing (e.g. invoices): A4 paper, white background, keep tinted backgrounds. */
+@media print {
+  @page {
+    size: A4;
+    margin: 12mm;
+  }
+  html,
+  body {
+    background: white !important;
+  }
+  * {
+    print-color-adjust: exact;
+  }
+}

@@ -8,10 +8,13 @@ export default function AppLayout({ children }: LayoutProps<"/">) {
     <>
       <SkipLink />
       <AppSidebar />
-      <div className="flex min-h-full flex-1 flex-col lg:pl-64">
+      <div className="flex min-h-full flex-1 flex-col lg:pl-64 print:pl-0">
         <AppHeader />
         <main id="main" className="flex-1">
-          <div className="mx-auto w-full max-w-5xl px-4 py-8 sm:px-6 lg:py-10">{children}</div>
+          {/* Pages that need more room (e.g. the invoice editor) mark themselves with data-wide-page. */}
+          <div className="mx-auto w-full max-w-5xl px-4 py-8 has-[[data-wide-page]]:max-w-screen-2xl sm:px-6 lg:py-10 print:max-w-none print:p-0">
+            {children}
+          </div>
         </main>
       </div>
     </>

@@ -21,7 +21,7 @@ const benefits = [
     icon: Landmark,
     title: "Built around Indian GST",
     description:
-      "CGST + SGST for sales within your state, IGST for sales to other states, and clear separation of tax invoices, bills of supply and non-GST invoices.",
+      "CGST + SGST for sales within your state, IGST for sales to other states, and a clear choice between a GST tax invoice and an invoice without GST.",
   },
   {
     icon: Calculator,

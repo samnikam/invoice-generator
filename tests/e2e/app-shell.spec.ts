@@ -10,15 +10,22 @@ test.describe("workspace shell", () => {
   test("dashboard shows honest tool status with no fake data", async ({ page }) => {
     await expect(page).toHaveTitle(/Dashboard \| SmartBill/);
     await expect(page.getByRole("heading", { level: 1 })).toContainText("Welcome to SmartBill");
-    await expect(page.getByRole("status")).toContainText("3 tools are still being built");
+    await expect(page.getByRole("status")).toContainText("2 tools are still being built");
     await expect(page.getByRole("main").getByText("In development", { exact: true })).toHaveCount(
-      3,
+      2,
     );
-    await expect(page.getByRole("main").getByText("Available", { exact: true })).toHaveCount(1);
+    await expect(page.getByRole("main").getByText("Available", { exact: true })).toHaveCount(2);
   });
 
-  test("dashboard opens the calculators", async ({ page }) => {
-    await page.getByRole("main").getByRole("link", { name: "Open" }).click();
+  test("dashboard opens the invoice generator and the calculators", async ({ page }) => {
+    const card = (title: string) =>
+      page.getByRole("main").getByRole("listitem").filter({ hasText: title });
+    await card("GST invoices").getByRole("link", { name: "Open" }).click();
+    await expect(page).toHaveURL(/\/invoices\/new$/);
+    await expect(page.getByRole("heading", { level: 1 })).toHaveText("New invoice");
+
+    await page.goto("/dashboard");
+    await card("Business calculators").getByRole("link", { name: "Open" }).click();
     await expect(page).toHaveURL(/\/calculators$/);
     await expect(page.getByRole("heading", { level: 1 })).toHaveText("Business calculators");
   });
@@ -40,11 +47,15 @@ test.describe("workspace shell", () => {
       "aria-current",
       "page",
     );
-    for (const name of ["Invoices", "Quotations", "Receipts"]) {
+    for (const name of ["Quotations", "Receipts"]) {
       await expect(nav.getByRole("link", { name })).toHaveCount(0);
       await expect(nav.getByText(name)).toBeVisible();
     }
-    await expect(nav.getByText("Soon")).toHaveCount(3);
+    await expect(nav.getByText("Soon")).toHaveCount(2);
+    await expect(nav.getByRole("link", { name: "Invoices" })).toHaveAttribute(
+      "href",
+      "/invoices/new",
+    );
     await expect(nav.getByRole("link", { name: "Calculators" })).toHaveAttribute(
       "href",
       "/calculators",

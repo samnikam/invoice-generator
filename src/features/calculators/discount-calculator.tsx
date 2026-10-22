@@ -2,6 +2,8 @@
 
 import { RotateCcw } from "lucide-react";
 
+import { AmountInput } from "@/components/forms/amount-input";
+import { FormField } from "@/components/forms/form-field";
 import { Button } from "@/components/ui/button";
 import {
   runDiscountCalculator,
@@ -11,9 +13,7 @@ import {
 import { formatPaise } from "@/lib/money/format";
 import { formatBasisPointsAsPercent } from "@/lib/money/percent";
 
-import { AmountInput } from "./components/amount-input";
 import { CalculatorGrid } from "./components/calculator-layout";
-import { FormField } from "./components/form-field";
 import { Explanation, ResultList, ResultPanel, ResultRow } from "./components/result-panel";
 import { useCalculatorForm } from "./components/use-calculator-form";
 

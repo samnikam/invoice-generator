@@ -2,6 +2,9 @@
 
 import { RotateCcw } from "lucide-react";
 
+import { AmountInput } from "@/components/forms/amount-input";
+import { describedBy, FieldError, FormField } from "@/components/forms/form-field";
+import { GstRateSelect, ProvisionalRateNotice, StateSelect } from "@/components/forms/tax-selects";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import {
@@ -14,11 +17,8 @@ import { formatPaise } from "@/lib/money/format";
 import { formatHalfRatePercent } from "@/lib/money/percent";
 import type { SupplyType } from "@/lib/tax/supply-type";
 
-import { AmountInput } from "./components/amount-input";
 import { CalculatorGrid } from "./components/calculator-layout";
-import { describedBy, FieldError, FormField } from "./components/form-field";
 import { Explanation, ResultList, ResultPanel, ResultRow } from "./components/result-panel";
-import { GstRateSelect, ProvisionalRateNotice, StateSelect } from "./components/tax-selects";
 import { useCalculatorForm } from "./components/use-calculator-form";
 
 const INITIAL: GstCalculatorInput = {

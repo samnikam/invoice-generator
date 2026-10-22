@@ -27,15 +27,15 @@ export const features: readonly Feature[] = [
     id: "invoices",
     title: "GST invoices",
     shortTitle: "Invoices",
-    description:
-      "Create tax invoices, bills of supply or simple invoices with automatic tax and totals.",
+    description: "Create GST tax invoices, or invoices without GST, with automatic tax and totals.",
     highlights: [
       "CGST + SGST or IGST based on place of supply",
       "Per-item discounts and GST rates",
-      "Live preview, PDF download and print",
+      "Live preview, print and save as PDF",
     ],
     icon: FileText,
-    status: "in-development",
+    status: "available",
+    href: "/invoices/new",
   },
   {
     id: "quotations",
