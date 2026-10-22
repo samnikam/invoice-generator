@@ -32,5 +32,5 @@ export const sampleInvoice = {
   cgstPaise: 207000,
   sgstPaise: 207000,
   totalPaise: 2714000,
-  amountInWords: "Indian Rupees Twenty-Seven Thousand One Hundred Forty Only",
+  amountInWords: "Rupees Twenty-Seven Thousand One Hundred Forty Only",
 } as const;
