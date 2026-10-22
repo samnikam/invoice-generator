@@ -1,0 +1,12 @@
+# Store text files with LF line endings in Git so the repo behaves the same on
+# Windows, macOS and Linux. Editors on Windows handle LF fine.
+* text=auto eol=lf
+
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.ico binary
+*.pdf binary
+*.woff binary
+*.woff2 binary
+*.ttf binary
