@@ -39,7 +39,7 @@ const benefits = [
     icon: ShieldCheck,
     title: "Private by default",
     description:
-      "No sign-up needed. In the first release, drafts are saved only in your own browser on your device — nothing is uploaded.",
+      "No sign-up needed. What you enter stays in your browser tab and is never uploaded or saved.",
   },
 ] as const;
 
@@ -97,7 +97,7 @@ export default function HomePage() {
               </Button>
             </div>
             <p className="mt-8 text-xs font-semibold tracking-wide text-muted-foreground uppercase">
-              Planned for the first release
+              Included
             </p>
             <ul className="mt-3 grid gap-2 text-sm text-muted-foreground sm:grid-cols-2">
               {["No sign-up needed", "CGST, SGST & IGST", "Amount in words", "PDF & print"].map(

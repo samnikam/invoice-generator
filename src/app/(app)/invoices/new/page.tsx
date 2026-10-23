@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 
-import { InvoiceGenerator } from "@/features/invoices/invoice-generator";
+import { BillingDocumentGenerator } from "@/features/billing-documents/document-generator";
 
 export const metadata: Metadata = {
   title: "New invoice",
@@ -9,5 +9,5 @@ export const metadata: Metadata = {
 };
 
 export default function NewInvoicePage() {
-  return <InvoiceGenerator />;
+  return <BillingDocumentGenerator kind="invoice" />;
 }

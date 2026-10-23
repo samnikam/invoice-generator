@@ -85,8 +85,8 @@ export default function DashboardPage() {
             About your data
           </h2>
           <p className="mt-1 leading-relaxed text-muted-foreground">
-            No account is needed. In this early version, drafts will be saved only in this browser
-            on this device and are never uploaded. Clearing your browser data will remove them.
+            No account is needed. What you enter stays in your browser tab and is never uploaded or
+            saved — refreshing the page clears it. Print or save a PDF to keep a copy.
           </p>
         </div>
       </section>

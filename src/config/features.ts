@@ -44,11 +44,12 @@ export const features: readonly Feature[] = [
     description: "Send clear price quotes with taxes, validity date and your terms.",
     highlights: [
       "Same accurate tax engine as invoices",
-      "Validity date and terms",
-      "PDF and print",
+      "Validity date, terms and customer acceptance",
+      "Print and save as PDF",
     ],
     icon: MessageSquareQuote,
-    status: "in-development",
+    status: "available",
+    href: "/quotations/new",
   },
   {
     id: "receipts",
@@ -57,11 +58,12 @@ export const features: readonly Feature[] = [
     description: "Record money received with payment method, reference and amount in words.",
     highlights: [
       "Cash, UPI, bank transfer and cheque",
-      "Amount in Indian Rupee words",
-      "PDF and print",
+      "Amount in words and optional balance due",
+      "Print and save as PDF",
     ],
     icon: ReceiptIndianRupee,
-    status: "in-development",
+    status: "available",
+    href: "/receipts/new",
   },
   {
     id: "calculators",

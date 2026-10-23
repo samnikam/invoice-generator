@@ -20,13 +20,16 @@ test.describe("landing page", () => {
     await expect(page.getByText("₹27,140.00")).toBeVisible();
   });
 
-  test("marks unfinished features as in development and links available ones", async ({ page }) => {
+  test("links every available feature", async ({ page }) => {
     const featureSection = page.locator("#features");
-    await expect(featureSection.getByText("In development")).toHaveCount(2);
-    await expect(featureSection.getByRole("link", { name: "Open invoices" })).toHaveAttribute(
-      "href",
-      "/invoices/new",
-    );
+    await expect(featureSection.getByText("In development")).toHaveCount(0);
+    for (const [name, href] of [
+      ["Open invoices", "/invoices/new"],
+      ["Open quotations", "/quotations/new"],
+      ["Open receipts", "/receipts/new"],
+    ] as const) {
+      await expect(featureSection.getByRole("link", { name })).toHaveAttribute("href", href);
+    }
     await featureSection.getByRole("link", { name: "Open calculators" }).click();
     await expect(page).toHaveURL(/\/calculators$/);
   });

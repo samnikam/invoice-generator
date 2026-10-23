@@ -2,24 +2,24 @@ import { describe, expect, it } from "vitest";
 
 import { formatDisplayDate, parseIsoDate, todayIsoDate } from "@/lib/dates";
 import {
-  createEmptyInvoice,
+  createEmptyDocument,
   createEmptyLine,
-  evaluateInvoice,
+  evaluateDocument,
   fieldDomId,
-  type InvoiceFormValues,
-  type InvoiceLineValues,
-} from "@/lib/invoices/invoice-form";
+  type BillingDocumentValues,
+  type LineValues,
+} from "@/lib/documents/billing-document";
 import { amountInWords } from "@/lib/money/amount-in-words";
 
 /* ───────────── fixtures ───────────── */
 
-const line = (id: string, overrides: Partial<InvoiceLineValues>): InvoiceLineValues => ({
+const line = (id: string, overrides: Partial<LineValues>): LineValues => ({
   ...createEmptyLine(id),
   ...overrides,
 });
 
 /** The three-item example independently verified (Python Decimal) in the Step 1.2 audit. */
-const THREE_LINES: InvoiceLineValues[] = [
+const THREE_LINES: LineValues[] = [
   line("a", {
     description: "Design work",
     quantity: "2",
@@ -47,11 +47,11 @@ const THREE_LINES: InvoiceLineValues[] = [
   }),
 ];
 
-function taxInvoice(overrides: Partial<InvoiceFormValues> = {}): InvoiceFormValues {
-  const base = createEmptyInvoice();
+function taxInvoice(overrides: Partial<BillingDocumentValues> = {}): BillingDocumentValues {
+  const base = createEmptyDocument("invoice");
   return {
     ...base,
-    documentType: "tax-invoice",
+    gstMode: "with-gst",
     seller: {
       name: "Example Studio",
       address: "Pune, Maharashtra",
@@ -61,28 +61,29 @@ function taxInvoice(overrides: Partial<InvoiceFormValues> = {}): InvoiceFormValu
       stateCode: "27",
     },
     customer: { ...base.customer, name: "Example Customer" },
-    invoiceNumber: "INV-2026/001",
-    invoiceDate: "2026-10-22",
+    documentNumber: "INV-2026/001",
+    issueDate: "2026-10-22",
     placeOfSupply: "27",
     lines: THREE_LINES,
     ...overrides,
   };
 }
 
-const fields = (values: InvoiceFormValues) => evaluateInvoice(values).issues.map((i) => i.field);
+const fields = (values: BillingDocumentValues) =>
+  evaluateDocument(values).issues.map((i) => i.field);
 
 /* ───────────── tests ───────────── */
 
-describe("evaluateInvoice — required fields", () => {
+describe("evaluateDocument — required fields", () => {
   it("lists every missing required field for an empty form, in order", () => {
-    const result = evaluateInvoice(createEmptyInvoice());
+    const result = evaluateDocument(createEmptyDocument("invoice"));
     expect(result.issues.map((i) => i.field)).toEqual([
-      "documentType",
+      "gstMode",
       "seller.name",
       "seller.address",
       "customer.name",
-      "invoiceNumber",
-      "invoiceDate",
+      "documentNumber",
+      "issueDate",
       "lines.line-1.description",
       "lines.line-1.unitPrice",
     ]);
@@ -94,7 +95,7 @@ describe("evaluateInvoice — required fields", () => {
       seller: { ...taxInvoice().seller, gstin: "", stateCode: "" },
       placeOfSupply: "",
     });
-    const result = evaluateInvoice(values);
+    const result = evaluateDocument(values);
     expect(result.errors["seller.gstin"]).toBe("GSTIN is required on a tax invoice.");
     expect(result.errors["seller.stateCode"]).toBe("Select the seller's state.");
     expect(result.errors["placeOfSupply"]).toBe("Select the place of supply.");
@@ -108,7 +109,7 @@ describe("evaluateInvoice — required fields", () => {
         line("y", { description: "B", unitPrice: "100", treatment: "taxable" }),
       ],
     });
-    const result = evaluateInvoice(values);
+    const result = evaluateDocument(values);
     expect(result.errors["lines.x.treatment"]).toBe("Choose how GST applies to this item.");
     expect(result.errors["lines.y.rateId"]).toBe("Select a GST rate.");
     expect(result.issues.find((i) => i.field === "lines.y.rateId")?.label).toBe("Item 2: GST rate");
@@ -119,43 +120,43 @@ describe("evaluateInvoice — required fields", () => {
   });
 });
 
-describe("evaluateInvoice — format checks", () => {
+describe("evaluateDocument — format checks", () => {
   it.each([
     ["INV 001", /letters, numbers/], // space
     ["INV#001", /letters, numbers/],
     ["INV-2026-27/00001", /up to 16 characters/i], // 17 characters
-  ])("rejects invoice number %j", (invoiceNumber, message) => {
-    expect(evaluateInvoice(taxInvoice({ invoiceNumber })).errors.invoiceNumber).toMatch(message);
+  ])("rejects invoice number %j", (documentNumber, message) => {
+    expect(evaluateDocument(taxInvoice({ documentNumber })).errors.documentNumber).toMatch(message);
   });
 
   it("accepts a 16-character invoice number with - and /", () => {
-    expect(fields(taxInvoice({ invoiceNumber: "INV-2026-27/0001" }))).toEqual([]);
+    expect(fields(taxInvoice({ documentNumber: "INV-2026-27/0001" }))).toEqual([]);
   });
 
   it("rejects a GSTIN from another state and a mistyped GSTIN", () => {
     const otherState = taxInvoice({ seller: { ...taxInvoice().seller, stateCode: "29" } });
-    expect(evaluateInvoice(otherState).errors["seller.gstin"]).toMatch(/belongs to state code 27/);
+    expect(evaluateDocument(otherState).errors["seller.gstin"]).toMatch(/belongs to state code 27/);
     const typo = taxInvoice({ seller: { ...taxInvoice().seller, gstin: "27AAPFU0939F1ZA" } });
-    expect(evaluateInvoice(typo).errors["seller.gstin"]).toMatch(/check character/);
+    expect(evaluateDocument(typo).errors["seller.gstin"]).toMatch(/check character/);
     const customer = taxInvoice({ customer: { ...taxInvoice().customer, gstin: "12345" } });
-    expect(evaluateInvoice(customer).errors["customer.gstin"]).toMatch(/15 characters/);
+    expect(evaluateDocument(customer).errors["customer.gstin"]).toMatch(/15 characters/);
   });
 
   it("validates dates, phone, email and HSN/SAC", () => {
     const values = taxInvoice({
-      invoiceDate: "2026-02-30",
+      issueDate: "2026-02-30",
       seller: { ...taxInvoice().seller, phone: "call me", email: "not-an-email" },
       lines: [line("h", { ...THREE_LINES[0], id: "h", hsnSac: "12345" })],
     });
-    const { errors } = evaluateInvoice(values);
-    expect(errors.invoiceDate).toBe("Invoice date must be a valid date.");
+    const { errors } = evaluateDocument(values);
+    expect(errors.issueDate).toBe("Invoice date must be a valid date.");
     expect(errors["seller.phone"]).toMatch(/valid phone number/);
     expect(errors["seller.email"]).toMatch(/valid email address/);
     expect(errors["lines.h.hsnSac"]).toBe("HSN/SAC code must be 4, 6 or 8 digits.");
   });
 
   it("rejects a due date before the invoice date", () => {
-    expect(evaluateInvoice(taxInvoice({ dueDate: "2026-10-21" })).errors.dueDate).toBe(
+    expect(evaluateDocument(taxInvoice({ dueDate: "2026-10-21" })).errors.dueDate).toBe(
       "Due date cannot be before the invoice date.",
     );
     expect(fields(taxInvoice({ dueDate: "2026-10-22" }))).toEqual([]);
@@ -174,7 +175,7 @@ describe("evaluateInvoice — format checks", () => {
         }),
       ],
     });
-    const { errors } = evaluateInvoice(values);
+    const { errors } = evaluateDocument(values);
     expect(errors["lines.q.quantity"]).toBe("Quantity must be greater than zero.");
     expect(errors["lines.q.unitPrice"]).toBe("Unit price cannot be negative.");
     expect(errors["lines.d.discountValue"]).toBe("Discount percentage cannot be more than 100%.");
@@ -193,7 +194,7 @@ describe("evaluateInvoice — format checks", () => {
         }),
       ],
     });
-    expect(evaluateInvoice(values).errors["lines.z.discountValue"]).toBe(
+    expect(evaluateDocument(values).errors["lines.z.discountValue"]).toBe(
       "Discount cannot be more than the item's value.",
     );
   });
@@ -203,15 +204,15 @@ describe("evaluateInvoice — format checks", () => {
       placeOfSupply: "29",
       lines: [line("l", { description: "A", unitPrice: "100", treatment: "zero-rated-lut" })],
     });
-    expect(evaluateInvoice(values).errors["lines.l.treatment"]).toMatch(
+    expect(evaluateDocument(values).errors["lines.l.treatment"]).toMatch(
       /exports or supplies to an SEZ/,
     );
   });
 });
 
-describe("evaluateInvoice — totals come from the shared engine", () => {
+describe("evaluateDocument — totals come from the shared engine", () => {
   it("intra-state, three items: ₹3,481.47 with CGST ₹240.75 + SGST ₹240.75", () => {
-    const { issues, totals } = evaluateInvoice(taxInvoice());
+    const { issues, totals } = evaluateDocument(taxInvoice());
     expect(issues).toEqual([]);
     expect(totals).toMatchObject({
       supplyType: { kind: "intra-state", stateTaxLabel: "SGST" },
@@ -231,7 +232,7 @@ describe("evaluateInvoice — totals come from the shared engine", () => {
   });
 
   it("round off to the nearest rupee is opt-in and shown separately: −₹0.47", () => {
-    const { totals } = evaluateInvoice(taxInvoice({ roundOff: true }));
+    const { totals } = evaluateDocument(taxInvoice({ roundOff: true }));
     expect(totals).toMatchObject({
       totalBeforeRoundOffPaise: 348147,
       roundOffPaise: -47,
@@ -240,7 +241,7 @@ describe("evaluateInvoice — totals come from the shared engine", () => {
   });
 
   it("inter-state (Maharashtra → Karnataka): IGST ₹481.49, total ₹3,481.46", () => {
-    const { totals } = evaluateInvoice(taxInvoice({ placeOfSupply: "29" }));
+    const { totals } = evaluateDocument(taxInvoice({ placeOfSupply: "29" }));
     expect(totals).toMatchObject({
       supplyType: { kind: "inter-state", reason: "different-state" },
       cgstPaise: 0,
@@ -255,21 +256,24 @@ describe("evaluateInvoice — totals come from the shared engine", () => {
       seller: { ...taxInvoice().seller, gstin: "04AAAAA0000A1ZA", stateCode: "04" },
       placeOfSupply: "04",
     });
-    expect(evaluateInvoice(values).totals?.supplyType).toMatchObject({ stateTaxLabel: "UTGST" });
+    expect(evaluateDocument(values).totals?.supplyType).toMatchObject({ stateTaxLabel: "UTGST" });
   });
 
   it("computes totals even while non-tax header fields are still incomplete", () => {
-    const values = taxInvoice({ invoiceNumber: "", customer: createEmptyInvoice().customer });
-    const result = evaluateInvoice(values);
-    expect(result.issues.map((i) => i.field)).toEqual(["customer.name", "invoiceNumber"]);
+    const values = taxInvoice({
+      documentNumber: "",
+      customer: createEmptyDocument("invoice").customer,
+    });
+    const result = evaluateDocument(values);
+    expect(result.issues.map((i) => i.field)).toEqual(["customer.name", "documentNumber"]);
     expect(result.totals?.grandTotalPaise).toBe(348147);
   });
 });
 
-describe("evaluateInvoice — invoice without GST", () => {
-  const nonGst = (overrides: Partial<InvoiceFormValues> = {}): InvoiceFormValues =>
+describe("evaluateDocument — invoice without GST", () => {
+  const nonGst = (overrides: Partial<BillingDocumentValues> = {}): BillingDocumentValues =>
     taxInvoice({
-      documentType: "non-gst-invoice",
+      gstMode: "without-gst",
       seller: { ...taxInvoice().seller, gstin: "", stateCode: "" },
       placeOfSupply: "",
       // Treatment/rate values left over from a tax invoice are ignored, never charged.
@@ -278,7 +282,7 @@ describe("evaluateInvoice — invoice without GST", () => {
     });
 
   it("charges no GST and needs no state or place of supply", () => {
-    const { issues, totals } = evaluateInvoice(nonGst());
+    const { issues, totals } = evaluateDocument(nonGst());
     expect(issues).toEqual([]);
     expect(totals).toMatchObject({
       supplyType: null,
@@ -291,14 +295,14 @@ describe("evaluateInvoice — invoice without GST", () => {
 
   it("refuses a seller GSTIN", () => {
     const values = nonGst({ seller: { ...taxInvoice().seller, stateCode: "" } });
-    expect(evaluateInvoice(values).errors["seller.gstin"]).toMatch(/Remove the GSTIN/);
+    expect(evaluateDocument(values).errors["seller.gstin"]).toMatch(/Remove the GSTIN/);
   });
 });
 
 describe("helpers", () => {
   it("builds safe DOM ids from field keys", () => {
-    expect(fieldDomId("lines.line-3.unitPrice")).toBe("invoice-lines-line-3-unitPrice");
-    expect(fieldDomId("seller.gstin")).toBe("invoice-seller-gstin");
+    expect(fieldDomId("lines.line-3.unitPrice")).toBe("doc-lines-line-3-unitPrice");
+    expect(fieldDomId("seller.gstin")).toBe("doc-seller-gstin");
   });
 
   it("parses and formats calendar dates", () => {
@@ -307,5 +311,69 @@ describe("helpers", () => {
     expect(() => parseIsoDate("22/10/2026")).toThrow();
     expect(formatDisplayDate("2026-10-05")).toBe("5 Oct 2026");
     expect(todayIsoDate(new Date(2026, 0, 9))).toBe("2026-01-09");
+  });
+});
+
+describe("evaluateDocument — quotations", () => {
+  const quotation = (overrides: Partial<BillingDocumentValues> = {}): BillingDocumentValues =>
+    taxInvoice({ kind: "quotation", documentNumber: "QT-2026/001", ...overrides });
+
+  it("uses quotation labels and messages for an empty form", () => {
+    const result = evaluateDocument(createEmptyDocument("quotation"));
+    expect(result.issues.map((i) => [i.field, i.label])).toEqual([
+      ["gstMode", "Quotation type"],
+      ["seller.name", "Business name"],
+      ["seller.address", "Business address"],
+      ["customer.name", "Customer name"],
+      ["documentNumber", "Quotation number"],
+      ["issueDate", "Issue date"],
+      ["lines.line-1.description", "Item 1: description"],
+      ["lines.line-1.unitPrice", "Item 1: unit price"],
+    ]);
+    expect(result.errors.gstMode).toBe("Choose whether this quotation includes GST.");
+    expect(result.errors.documentNumber).toBe("Quotation number is required.");
+    expect(result.errors.issueDate).toBe("Issue date is required.");
+  });
+
+  it("with GST: GSTIN is optional, totals come from the engine (₹3,481.47)", () => {
+    const values = quotation({ seller: { ...taxInvoice().seller, gstin: "" } });
+    const { issues, totals } = evaluateDocument(values);
+    expect(issues).toEqual([]);
+    expect(totals).toMatchObject({ cgstPaise: 24075, sgstPaise: 24075, grandTotalPaise: 348147 });
+  });
+
+  it("with GST: a GSTIN that is entered is still checked", () => {
+    const values = quotation({ seller: { ...taxInvoice().seller, stateCode: "29" } });
+    expect(evaluateDocument(values).errors["seller.gstin"]).toMatch(/belongs to state code 27/);
+  });
+
+  it("with GST: still requires seller state and place of supply", () => {
+    const values = quotation({
+      seller: { ...taxInvoice().seller, stateCode: "" },
+      placeOfSupply: "",
+    });
+    const { errors, totals } = evaluateDocument(values);
+    expect(errors["seller.stateCode"]).toBe("Select the seller's state.");
+    expect(errors.placeOfSupply).toBe("Select the place of supply.");
+    expect(totals).toBeNull();
+  });
+
+  it("checks “valid until” against the issue date and ignores the invoice due date", () => {
+    expect(evaluateDocument(quotation({ validUntil: "2026-10-21" })).errors.validUntil).toBe(
+      "“Valid until” cannot be before the issue date.",
+    );
+    expect(evaluateDocument(quotation({ validUntil: "2026-11-21" })).issues).toEqual([]);
+    expect(evaluateDocument(quotation({ dueDate: "2026-01-01" })).issues).toEqual([]);
+  });
+
+  it("without GST: no tax, no state needed, and a leftover GSTIN is ignored (not refused)", () => {
+    const values = quotation({
+      gstMode: "without-gst",
+      seller: { ...taxInvoice().seller, stateCode: "" },
+      placeOfSupply: "",
+    });
+    const { issues, totals } = evaluateDocument(values);
+    expect(issues).toEqual([]);
+    expect(totals).toMatchObject({ supplyType: null, totalTaxPaise: 0, grandTotalPaise: 299997 });
   });
 });

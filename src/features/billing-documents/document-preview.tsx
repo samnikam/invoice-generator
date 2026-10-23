@@ -4,8 +4,13 @@ import { cn } from "cn";
 import { TREATMENT_OPTIONS } from "@/lib/calculators/gst-calculator";
 import { OUTSIDE_INDIA } from "@/lib/calculators/place-of-supply";
 import { formatDisplayDate } from "@/lib/dates";
+import {
+  DOCUMENT_KINDS,
+  showsSellerGstin,
+  type BillingDocumentValues,
+  type DocumentEvaluation,
+} from "@/lib/documents/billing-document";
 import type { DocumentTotals, LineResult } from "@/lib/documents/calculate-totals";
-import type { InvoiceEvaluation, InvoiceFormValues } from "@/lib/invoices/invoice-form";
 import { amountInWords } from "@/lib/money/amount-in-words";
 import { formatPaise } from "@/lib/money/format";
 import { formatBasisPointsAsPercent, formatHalfRatePercent } from "@/lib/money/percent";
@@ -13,35 +18,39 @@ import { formatQuantity } from "@/lib/money/quantity";
 import { GST_STATES } from "@/lib/tax/states";
 
 /**
- * The invoice document. Used both as the live on-screen preview and as the printed /
- * "Save as PDF" page (see the print: classes). It only displays values: every figure
- * comes from the shared calculation engine via `evaluation.totals`.
+ * The invoice or quotation document. Used both as the live on-screen preview and as the
+ * printed / "Save as PDF" page (see the print: classes). It only displays values: every
+ * figure comes from the shared calculation engine via `evaluation.totals`.
  *
  * Colours: unlike the rest of the app, the document uses fixed neutral colours
- * (white paper, near-black text) rather than theme tokens, so the printed invoice is
+ * (white paper, near-black text) rather than theme tokens, so the printed document is
  * plain black-on-white whatever the app theme.
  */
-export function InvoicePreview({
+export function DocumentPreview({
   values,
   evaluation,
 }: {
-  values: InvoiceFormValues;
-  evaluation: InvoiceEvaluation;
+  values: BillingDocumentValues;
+  evaluation: DocumentEvaluation;
 }) {
+  const config = DOCUMENT_KINDS[values.kind];
+  const isQuotation = values.kind === "quotation";
   const totals = evaluation.totals;
-  const isTaxInvoice = values.documentType === "tax-invoice";
-  const title = isTaxInvoice ? "Tax Invoice" : "Invoice";
+  const withGst = values.gstMode === "with-gst";
+  const title = config.title[withGst ? "with-gst" : "without-gst"];
   const complete = evaluation.issues.length === 0 && totals !== null;
+  const endDate = values[config.endDate.field];
+  const sectionHeading = "text-[11px] font-semibold tracking-wider text-neutral-500 uppercase";
 
   return (
     <article
       aria-label={`${title} preview`}
-      data-testid="invoice-preview"
+      data-testid="document-preview"
       className="rounded-xl border bg-white text-[13px] leading-relaxed text-neutral-900 shadow-sm print:rounded-none print:border-0 print:text-[11px] print:shadow-none"
     >
       {!complete ? (
         <p className="rounded-t-xl border-b bg-muted px-5 py-2 text-xs text-muted-foreground print:hidden">
-          Preview — fill in the highlighted details to complete this invoice.
+          Preview — fill in the highlighted details to complete this {config.noun}.
         </p>
       ) : null}
 
@@ -50,6 +59,14 @@ export function InvoicePreview({
         <header className="flex flex-wrap items-start justify-between gap-4 border-b-2 border-neutral-900 pb-4">
           <div className="min-w-0 space-y-0.5">
             <h2 className="text-lg font-bold tracking-wide uppercase">{title}</h2>
+            {isQuotation ? (
+              <p
+                className="pb-1 text-[11px] text-neutral-500"
+                data-testid="preview-document-notice"
+              >
+                Price estimate — not an invoice and not a receipt for payment.
+              </p>
+            ) : null}
             <Text
               value={values.seller.name}
               placeholder="Your business name"
@@ -57,24 +74,24 @@ export function InvoicePreview({
             />
             <Multiline value={values.seller.address} />
             <ContactLine phone={values.seller.phone} email={values.seller.email} />
-            {isTaxInvoice ? (
-              <>
-                <Labelled label="GSTIN" value={values.seller.gstin.trim().toUpperCase()} mono />
-                <Labelled label="State" value={stateLabel(values.seller.stateCode)} />
-              </>
+            {showsSellerGstin(values) ? (
+              <Labelled label="GSTIN" value={values.seller.gstin.trim().toUpperCase()} mono />
+            ) : null}
+            {withGst ? (
+              <Labelled label="State" value={stateLabel(values.seller.stateCode)} />
             ) : null}
           </div>
           <dl className="grid shrink-0 grid-cols-[auto_auto] gap-x-3 gap-y-0.5 text-right">
-            <dt className="text-neutral-500">Invoice no.</dt>
-            <dd className="font-semibold" data-testid="preview-invoice-number">
-              {values.invoiceNumber.trim() || "—"}
+            <dt className="text-neutral-500">{config.Noun} no.</dt>
+            <dd className="font-semibold" data-testid="preview-document-number">
+              {values.documentNumber.trim() || "—"}
             </dd>
-            <dt className="text-neutral-500">Invoice date</dt>
-            <dd>{values.invoiceDate ? formatDisplayDate(values.invoiceDate) : "—"}</dd>
-            {values.dueDate ? (
+            <dt className="text-neutral-500">{config.dateLabel}</dt>
+            <dd>{values.issueDate ? formatDisplayDate(values.issueDate) : "—"}</dd>
+            {endDate ? (
               <>
-                <dt className="text-neutral-500">Due date</dt>
-                <dd>{formatDisplayDate(values.dueDate)}</dd>
+                <dt className="text-neutral-500">{config.endDate.label}</dt>
+                <dd data-testid="preview-end-date">{formatDisplayDate(endDate)}</dd>
               </>
             ) : null}
           </dl>
@@ -83,9 +100,7 @@ export function InvoicePreview({
         {/* Parties */}
         <section className="grid gap-4 sm:grid-cols-2 print:grid-cols-2">
           <div className="min-w-0 space-y-0.5">
-            <h3 className="text-[11px] font-semibold tracking-wider text-neutral-500 uppercase">
-              Bill to
-            </h3>
+            <h3 className={sectionHeading}>{isQuotation ? "Prepared for" : "Bill to"}</h3>
             <Text
               value={values.customer.name}
               placeholder="Customer name"
@@ -96,11 +111,9 @@ export function InvoicePreview({
             <ContactLine phone={values.customer.phone} email={values.customer.email} />
             <Labelled label="GSTIN" value={values.customer.gstin.trim().toUpperCase()} mono />
           </div>
-          {isTaxInvoice ? (
+          {withGst ? (
             <div className="min-w-0 space-y-0.5 sm:text-right print:text-right">
-              <h3 className="text-[11px] font-semibold tracking-wider text-neutral-500 uppercase">
-                Place of supply
-              </h3>
+              <h3 className={sectionHeading}>Place of supply</h3>
               <p data-testid="preview-place-of-supply">
                 {placeOfSupplyLabel(values)}
                 {values.recipientIsSez ? " — SEZ unit/developer" : ""}
@@ -120,11 +133,11 @@ export function InvoicePreview({
           values={values}
           totals={totals}
           parsedLines={evaluation.parsedLines}
-          isTaxInvoice={isTaxInvoice}
+          withGst={withGst}
         />
 
         {totals ? (
-          <TotalsSection values={values} totals={totals} isTaxInvoice={isTaxInvoice} />
+          <TotalsSection values={values} totals={totals} withGst={withGst} />
         ) : (
           <p className="rounded-lg border border-dashed p-4 text-center text-neutral-500">
             Totals appear here once every item and the tax details are filled in correctly.
@@ -136,18 +149,16 @@ export function InvoicePreview({
           <section className="grid gap-4 border-t pt-4 sm:grid-cols-2 print:grid-cols-2">
             {values.notes.trim() ? (
               <div className="min-w-0">
-                <h3 className="text-[11px] font-semibold tracking-wider text-neutral-500 uppercase">
-                  Notes / payment details
+                <h3 className={sectionHeading}>
+                  {isQuotation ? "Notes" : "Notes / payment details"}
                 </h3>
                 <Multiline value={values.notes} testId="preview-notes" />
               </div>
             ) : null}
             {values.terms.trim() ? (
               <div className="min-w-0">
-                <h3 className="text-[11px] font-semibold tracking-wider text-neutral-500 uppercase">
-                  Terms
-                </h3>
-                <Multiline value={values.terms} />
+                <h3 className={sectionHeading}>Terms</h3>
+                <Multiline value={values.terms} testId="preview-terms" />
               </div>
             ) : null}
           </section>
@@ -155,19 +166,39 @@ export function InvoicePreview({
 
         {/* Footer */}
         <footer className="flex break-inside-avoid flex-wrap items-end justify-between gap-6 border-t pt-4">
-          <div className="max-w-sm space-y-1 text-[11px] text-neutral-500">
-            {values.documentType === "non-gst-invoice" ? (
-              <p data-testid="preview-non-gst-note">
-                The supplier is not registered under GST. No GST has been charged on this invoice.
-              </p>
-            ) : null}
-            <p>All amounts are in Indian Rupees (₹) and rounded to the nearest paisa.</p>
-          </div>
-          <div className="text-right">
+          {isQuotation ? (
+            <div className="min-w-56 space-y-5 text-[11px]" data-testid="preview-acceptance">
+              <p className="font-semibold text-neutral-700">Accepted by customer</p>
+              {["Name", "Signature", "Date"].map((label) => (
+                <div key={label} className="border-b border-neutral-400 pb-1 text-neutral-500">
+                  {label}
+                </div>
+              ))}
+            </div>
+          ) : null}
+          <div className="ml-auto text-right">
             <p className="font-semibold">For {values.seller.name.trim() || "your business"}</p>
             <div className="mt-10 border-t border-neutral-400 pt-1 text-[11px] text-neutral-500">
               Authorised signatory
             </div>
+          </div>
+          <div className="w-full space-y-1 text-[11px] text-neutral-500">
+            {values.kind === "invoice" && values.gstMode === "without-gst" ? (
+              <p data-testid="preview-non-gst-note">
+                The supplier is not registered under GST. No GST has been charged on this invoice.
+              </p>
+            ) : null}
+            {isQuotation && values.gstMode === "without-gst" ? (
+              <p data-testid="preview-non-gst-note">
+                No GST has been added to the amounts in this quotation.
+              </p>
+            ) : null}
+            {isQuotation ? (
+              <p>
+                This quotation is an offer only. It is not an invoice and is not proof of payment.
+              </p>
+            ) : null}
+            <p>All amounts are in Indian Rupees (₹) and rounded to the nearest paisa.</p>
           </div>
         </footer>
       </div>
@@ -181,18 +212,18 @@ function ItemsTable({
   values,
   totals,
   parsedLines,
-  isTaxInvoice,
+  withGst,
 }: {
-  values: InvoiceFormValues;
+  values: BillingDocumentValues;
   totals: DocumentTotals | null;
-  parsedLines: InvoiceEvaluation["parsedLines"];
-  isTaxInvoice: boolean;
+  parsedLines: DocumentEvaluation["parsedLines"];
+  withGst: boolean;
 }) {
   const showHsn = values.lines.some((l) => l.hsnSac.trim() !== "");
   return (
     <div className="-mx-1 overflow-x-auto px-1 print:mx-0 print:overflow-visible print:px-0">
       <table className="w-full min-w-135 border-collapse text-left text-xs print:min-w-0 print:text-[10.5px]">
-        <caption className="sr-only">Invoice items</caption>
+        <caption className="sr-only">Items</caption>
         <thead>
           <tr className="border-y bg-neutral-100 text-[11px] text-neutral-600 print:bg-neutral-100">
             <th scope="col" className="w-8 px-2 py-2 font-semibold">
@@ -215,7 +246,7 @@ function ItemsTable({
             <th scope="col" className="px-2 py-2 text-right font-semibold">
               Discount
             </th>
-            {isTaxInvoice ? (
+            {withGst ? (
               <>
                 <th scope="col" className="px-2 py-2 text-right font-semibold">
                   Taxable value
@@ -269,7 +300,7 @@ function ItemsTable({
                     ""
                   )}
                 </td>
-                {isTaxInvoice ? (
+                {withGst ? (
                   <>
                     <td className="px-2 py-2 text-right tabular-nums">
                       {result ? formatPaise(result.taxablePaise) : "—"}
@@ -313,11 +344,11 @@ function GstCell({ result }: { result: LineResult }) {
 function TotalsSection({
   values,
   totals,
-  isTaxInvoice,
+  withGst,
 }: {
-  values: InvoiceFormValues;
+  values: BillingDocumentValues;
   totals: DocumentTotals;
-  isTaxInvoice: boolean;
+  withGst: boolean;
 }) {
   const intra = totals.supplyType?.kind === "intra-state";
   const stateTax =
@@ -327,7 +358,7 @@ function TotalsSection({
   return (
     <section className="grid break-inside-avoid gap-6 sm:grid-cols-[1fr_auto] print:grid-cols-[1fr_auto]">
       <div className="min-w-0 space-y-4">
-        {isTaxInvoice && totals.rateSummary.length > 0 ? (
+        {withGst && totals.rateSummary.length > 0 ? (
           <table className="w-full border-collapse text-[11px]">
             <caption className="mb-1 text-left text-[11px] font-semibold tracking-wider text-neutral-500 uppercase">
               Tax summary
@@ -420,7 +451,7 @@ function TotalsSection({
             testId="preview-discount"
           />
         ) : null}
-        {isTaxInvoice ? (
+        {withGst ? (
           <>
             <TotalRow label="Taxable value" value={formatPaise(totals.taxablePaise)} />
             {intra ? (
@@ -495,7 +526,7 @@ function stateLabel(code: string): string {
   return state ? `${state.name} (${state.code})` : "";
 }
 
-function placeOfSupplyLabel(values: InvoiceFormValues): string {
+function placeOfSupplyLabel(values: BillingDocumentValues): string {
   if (values.placeOfSupply === OUTSIDE_INDIA) return "Outside India (export)";
   return stateLabel(values.placeOfSupply) || "—";
 }

@@ -26,7 +26,7 @@ async function open(page: Page) {
 }
 
 const item = (page: Page, index: number) => page.getByTestId("line-item").nth(index);
-const preview = (page: Page) => page.getByTestId("invoice-preview");
+const preview = (page: Page) => page.getByTestId("document-preview");
 
 async function showPreview(page: Page) {
   const toggle = page.getByRole("button", { name: "Preview invoice" });
@@ -297,7 +297,7 @@ test.describe("invoice generator", () => {
     await expect(page.getByRole("navigation", { name: "Workspace" })).toBeHidden();
     const doc = preview(page);
     await expect(doc).toBeVisible();
-    await expect(doc.getByTestId("preview-invoice-number")).toHaveText("INV-2026/001");
+    await expect(doc.getByTestId("preview-document-number")).toHaveText("INV-2026/001");
     await expect(doc.getByTestId("preview-place-of-supply")).toHaveText("Karnataka (29)");
     await expect(doc.getByTestId("preview-line")).toHaveCount(3);
     await expect(doc.getByTestId("preview-igst")).toHaveText("₹481.49");

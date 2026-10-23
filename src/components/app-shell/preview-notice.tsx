@@ -7,7 +7,7 @@ export function PreviewNotice() {
         <Sparkles aria-hidden="true" className="size-3.5 text-primary" />
         Early preview
       </p>
-      <p className="mt-1">Tools marked “Soon” are being built and tested.</p>
+      <p className="mt-1">Nothing you enter is saved. Print or save a PDF to keep a copy.</p>
     </div>
   );
 }

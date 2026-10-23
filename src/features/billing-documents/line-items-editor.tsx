@@ -11,18 +11,14 @@ import { NativeSelect } from "@/components/ui/native-select";
 import { Textarea } from "@/components/ui/textarea";
 import { TREATMENT_OPTIONS } from "@/lib/calculators/gst-calculator";
 import type { DocumentTotals } from "@/lib/documents/calculate-totals";
-import {
-  fieldDomId,
-  type DiscountChoice,
-  type InvoiceLineValues,
-} from "@/lib/invoices/invoice-form";
+import { fieldDomId, type DiscountChoice, type LineValues } from "@/lib/documents/billing-document";
 import { formatPaise } from "@/lib/money/format";
 
-type LineField = keyof Omit<InvoiceLineValues, "id">;
+type LineField = keyof Omit<LineValues, "id">;
 
 export function LineItemsEditor({
   lines,
-  isTaxInvoice,
+  withGst,
   totals,
   errorFor,
   onChange,
@@ -30,11 +26,11 @@ export function LineItemsEditor({
   onAdd,
   onRemove,
 }: {
-  lines: InvoiceLineValues[];
-  isTaxInvoice: boolean;
+  lines: LineValues[];
+  withGst: boolean;
   totals: DocumentTotals | null;
   errorFor: (field: string) => string | undefined;
-  onChange: (id: string, patch: Partial<InvoiceLineValues>) => void;
+  onChange: (id: string, patch: Partial<LineValues>) => void;
   onTouch: (field: string) => void;
   onAdd: () => void;
   onRemove: (id: string) => void;
@@ -168,7 +164,7 @@ export function LineItemsEditor({
                   ) : null}
                 </div>
 
-                {isTaxInvoice ? (
+                {withGst ? (
                   <div className="grid gap-4 sm:grid-cols-2">
                     <FormField
                       id={id("treatment")}
@@ -182,7 +178,7 @@ export function LineItemsEditor({
                           value={line.treatment}
                           onChange={(e) => {
                             onChange(line.id, {
-                              treatment: e.target.value as InvoiceLineValues["treatment"],
+                              treatment: e.target.value as LineValues["treatment"],
                             });
                             onTouch(key("treatment"));
                           }}

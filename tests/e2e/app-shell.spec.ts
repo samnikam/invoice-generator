@@ -10,24 +10,29 @@ test.describe("workspace shell", () => {
   test("dashboard shows honest tool status with no fake data", async ({ page }) => {
     await expect(page).toHaveTitle(/Dashboard \| SmartBill/);
     await expect(page.getByRole("heading", { level: 1 })).toContainText("Welcome to SmartBill");
-    await expect(page.getByRole("status")).toContainText("2 tools are still being built");
+    // Every tool is available, so there is no "still being built" notice.
+    await expect(page.getByText(/still being built/)).toHaveCount(0);
     await expect(page.getByRole("main").getByText("In development", { exact: true })).toHaveCount(
-      2,
+      0,
     );
-    await expect(page.getByRole("main").getByText("Available", { exact: true })).toHaveCount(2);
+    await expect(page.getByRole("main").getByText("Available", { exact: true })).toHaveCount(4);
   });
 
-  test("dashboard opens the invoice generator and the calculators", async ({ page }) => {
+  test("dashboard opens every tool", async ({ page }) => {
     const card = (title: string) =>
       page.getByRole("main").getByRole("listitem").filter({ hasText: title });
-    await card("GST invoices").getByRole("link", { name: "Open" }).click();
-    await expect(page).toHaveURL(/\/invoices\/new$/);
-    await expect(page.getByRole("heading", { level: 1 })).toHaveText("New invoice");
-
-    await page.goto("/dashboard");
-    await card("Business calculators").getByRole("link", { name: "Open" }).click();
-    await expect(page).toHaveURL(/\/calculators$/);
-    await expect(page.getByRole("heading", { level: 1 })).toHaveText("Business calculators");
+    const tools: [string, RegExp, string][] = [
+      ["GST invoices", /\/invoices\/new$/, "New invoice"],
+      ["Quotations & estimates", /\/quotations\/new$/, "New quotation"],
+      ["Payment receipts", /\/receipts\/new$/, "New payment receipt"],
+      ["Business calculators", /\/calculators$/, "Business calculators"],
+    ];
+    for (const [title, url, heading] of tools) {
+      await page.goto("/dashboard");
+      await card(title).getByRole("link", { name: "Open" }).click();
+      await expect(page).toHaveURL(url);
+      await expect(page.getByRole("heading", { level: 1 })).toHaveText(heading);
+    }
   });
 
   test("every link has a working destination", async ({ page }) => {
@@ -38,24 +43,21 @@ test.describe("workspace shell", () => {
     await expectNoHorizontalOverflow(page);
   });
 
-  test("sidebar highlights the current page and does not link unfinished tools", async ({
-    page,
-  }) => {
+  test("sidebar highlights the current page and links every tool", async ({ page }) => {
     test.skip(viewportWidth(page) < LG, "sidebar is desktop-only");
     const nav = page.getByRole("navigation", { name: "Workspace" });
     await expect(nav.getByRole("link", { name: "Dashboard" })).toHaveAttribute(
       "aria-current",
       "page",
     );
-    for (const name of ["Quotations", "Receipts"]) {
-      await expect(nav.getByRole("link", { name })).toHaveCount(0);
-      await expect(nav.getByText(name)).toBeVisible();
+    await expect(nav.getByText("Soon")).toHaveCount(0);
+    for (const [name, href] of [
+      ["Invoices", "/invoices/new"],
+      ["Quotations", "/quotations/new"],
+      ["Receipts", "/receipts/new"],
+    ] as const) {
+      await expect(nav.getByRole("link", { name })).toHaveAttribute("href", href);
     }
-    await expect(nav.getByText("Soon")).toHaveCount(2);
-    await expect(nav.getByRole("link", { name: "Invoices" })).toHaveAttribute(
-      "href",
-      "/invoices/new",
-    );
     await expect(nav.getByRole("link", { name: "Calculators" })).toHaveAttribute(
       "href",
       "/calculators",
