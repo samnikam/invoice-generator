@@ -377,3 +377,78 @@ describe("evaluateDocument — quotations", () => {
     expect(totals).toMatchObject({ supplyType: null, totalTaxPaise: 0, grandTotalPaise: 299997 });
   });
 });
+
+describe("evaluateDocument — amount received and balance due (invoices)", () => {
+  // Grand total of the three-item example is ₹3,481.47 (348,147 paise).
+  it("shows no balance when no amount received is entered", () => {
+    expect(evaluateDocument(taxInvoice()).balance).toBeNull();
+    expect(evaluateDocument(taxInvoice({ amountReceived: "   " })).balance).toBeNull();
+  });
+
+  it("balance due: ₹3,481.47 − ₹1,000.00 = ₹2,481.47", () => {
+    const { balance, issues } = evaluateDocument(taxInvoice({ amountReceived: "1000" }));
+    expect(issues).toEqual([]);
+    expect(balance).toMatchObject({
+      documentTotalPaise: 348147,
+      thisPaymentPaise: 100000,
+      outcome: "balance-due",
+      balanceDuePaise: 248147,
+      excessPaise: 0,
+    });
+  });
+
+  it("paid in full when the amount received equals the grand total", () => {
+    expect(evaluateDocument(taxInvoice({ amountReceived: "3481.47" })).balance).toMatchObject({
+      outcome: "paid-in-full",
+      balanceDuePaise: 0,
+    });
+  });
+
+  it("uses the rounded grand total when round off is on (₹3,481.00)", () => {
+    expect(
+      evaluateDocument(taxInvoice({ roundOff: true, amountReceived: "3481" })).balance,
+    ).toMatchObject({ documentTotalPaise: 348100, outcome: "paid-in-full" });
+  });
+
+  it("reports an overpayment honestly: ₹5,000 received → ₹1,518.53 in excess", () => {
+    expect(evaluateDocument(taxInvoice({ amountReceived: "5000" })).balance).toMatchObject({
+      outcome: "overpaid",
+      balanceDuePaise: 0,
+      excessPaise: 151853,
+    });
+  });
+
+  it.each([
+    ["0", /must be more than ₹0/],
+    ["-10", /cannot be negative/],
+    ["10.555", /2 decimal places/],
+    ["1,000", /no commas/],
+  ])("rejects amount received %j", (amountReceived, message) => {
+    const result = evaluateDocument(taxInvoice({ amountReceived }));
+    expect(result.errors.amountReceived).toMatch(message);
+    expect(result.balance).toBeNull();
+  });
+
+  it("no balance while totals are incomplete, even with an amount received", () => {
+    const values = taxInvoice({ amountReceived: "100", placeOfSupply: "" });
+    expect(evaluateDocument(values).balance).toBeNull();
+  });
+
+  it("checks the payment mode length", () => {
+    expect(evaluateDocument(taxInvoice({ paymentMode: "x".repeat(301) })).errors.paymentMode).toBe(
+      "Payment mode must be 300 characters or fewer.",
+    );
+  });
+
+  it("quotations ignore the invoice-only payment fields", () => {
+    const values = taxInvoice({
+      kind: "quotation",
+      documentNumber: "QT-1",
+      amountReceived: "abc",
+      paymentMode: "x".repeat(400),
+    });
+    const result = evaluateDocument(values);
+    expect(result.issues).toEqual([]);
+    expect(result.balance).toBeNull();
+  });
+});

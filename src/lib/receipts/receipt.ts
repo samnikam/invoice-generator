@@ -9,7 +9,8 @@ import {
   TEXT_LIMITS,
   type DocumentIssue,
 } from "@/lib/documents/billing-document";
-import { parseRupees, sumPaise, type Paise } from "@/lib/money/paise";
+import { calculateBalance, type PaymentBalance } from "@/lib/money/balance";
+import { parseRupees, type Paise } from "@/lib/money/paise";
 
 /**
  * PAYMENT RECEIPT
@@ -76,17 +77,9 @@ export function createEmptyReceipt(): ReceiptValues {
   };
 }
 
-export type ReceiptBalance = {
-  documentTotalPaise: Paise;
-  previouslyPaidPaise: Paise;
-  thisPaymentPaise: Paise;
-  totalPaidPaise: Paise;
-  outcome: "balance-due" | "paid-in-full" | "overpaid";
-  /** Still to be paid (0 unless outcome is "balance-due"). */
-  balanceDuePaise: number;
-  /** Received beyond the total (0 unless outcome is "overpaid"). */
-  excessPaise: number;
-};
+/** Kept under its original names so receipt code and tests are unchanged. */
+export { calculateBalance };
+export type ReceiptBalance = PaymentBalance;
 
 export type ReceiptEvaluation = {
   issues: DocumentIssue[];
@@ -96,25 +89,6 @@ export type ReceiptEvaluation = {
   /** null when no invoice total was entered (or the balance inputs are invalid). */
   balance: ReceiptBalance | null;
 };
-
-/** Works out the remaining balance. All inputs are validated, non-negative whole paise. */
-export function calculateBalance(
-  documentTotalPaise: Paise,
-  previouslyPaidPaise: Paise,
-  thisPaymentPaise: Paise,
-): ReceiptBalance {
-  const totalPaidPaise = sumPaise([previouslyPaidPaise, thisPaymentPaise], "amount", "Total paid");
-  const difference = documentTotalPaise - totalPaidPaise; // exact: whole numbers
-  return {
-    documentTotalPaise,
-    previouslyPaidPaise,
-    thisPaymentPaise,
-    totalPaidPaise,
-    outcome: difference > 0 ? "balance-due" : difference === 0 ? "paid-in-full" : "overpaid",
-    balanceDuePaise: Math.max(difference, 0),
-    excessPaise: Math.max(-difference, 0),
-  };
-}
 
 const LIMITS = { reference: 50, againstDocument: 30 } as const;
 

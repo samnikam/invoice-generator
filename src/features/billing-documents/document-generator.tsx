@@ -10,9 +10,11 @@ import { useDocumentForm } from "@/components/documents/use-document-form";
 import { clearFormMessage, useLocalDraft } from "@/components/documents/use-local-draft";
 import { FormField } from "@/components/forms/form-field";
 import { ProvisionalRateNotice, StateSelect } from "@/components/forms/tax-selects";
+import { AmountInput } from "@/components/forms/amount-input";
 import { TextField } from "@/components/forms/text-field";
 import { ProfileFillBar } from "@/components/profile/profile-fill-bar";
 import { useSavedProfile } from "@/components/profile/use-saved-profile";
+import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { todayIsoDate } from "@/lib/dates";
 import {
@@ -31,9 +33,10 @@ import { nextLineNumber, parseBillingDocumentDraft } from "@/lib/drafts/draft-sh
 import { getBrowserStorage } from "@/lib/drafts/draft-storage";
 import { formatPaise } from "@/lib/money/format";
 import { toSellerFields } from "@/lib/profile/business-profile";
-import { readProfile } from "@/lib/profile/profile-storage";
+import { readLogo, readProfile } from "@/lib/profile/profile-storage";
 
 import { DocumentPreview } from "./document-preview";
+import { InvoiceDocument } from "./invoice-document";
 import { LineItemsEditor } from "./line-items-editor";
 
 type Section = "seller" | "customer";
@@ -80,9 +83,15 @@ export function BillingDocumentGenerator({ kind }: { kind: BillingDocumentKind }
     },
     // Only when no draft was restored: fill a new document from the saved profile.
     onNoDraft: () => {
-      const profile = readProfile(getBrowserStorage());
+      const storage = getBrowserStorage();
+      const profile = readProfile(storage);
       if (profile.status !== "loaded") return;
-      setValues((v) => ({ ...v, seller: toSellerFields(profile.profile) }));
+      const logo = kind === "invoice" ? readLogo(storage) : null;
+      setValues((v) => ({
+        ...v,
+        seller: toSellerFields(profile.profile),
+        sellerLogo: logo?.status === "loaded" ? logo.dataUrl : "",
+      }));
       setFilledFromProfile(true);
     },
   });
@@ -90,16 +99,23 @@ export function BillingDocumentGenerator({ kind }: { kind: BillingDocumentKind }
 
   /** Replaces only the business fields with the saved profile, after confirmation. */
   function applyProfileDetails() {
-    const profile = readProfile(getBrowserStorage());
+    const storage = getBrowserStorage();
+    const profile = readProfile(storage);
     if (profile.status !== "loaded") {
       savedProfile.refresh();
       return;
     }
+    const withLogo = kind === "invoice";
     const confirmed = window.confirm(
-      `Replace the business name, address, phone, email, GSTIN and state in this ${config.noun} with your saved business profile? Customer, items and other details are not changed.`,
+      `Replace the business name, address, phone, email, GSTIN and state${withLogo ? " and the logo" : ""} in this ${config.noun} with your saved business profile? Customer, items and other details are not changed.`,
     );
     if (!confirmed) return;
-    setValues((v) => ({ ...v, seller: toSellerFields(profile.profile) }));
+    const logo = withLogo ? readLogo(storage) : null;
+    setValues((v) => ({
+      ...v,
+      seller: toSellerFields(profile.profile),
+      ...(withLogo ? { sellerLogo: logo?.status === "loaded" ? logo.dataUrl : "" } : {}),
+    }));
     setFilledFromProfile(true);
   }
 
@@ -261,6 +277,20 @@ export function BillingDocumentGenerator({ kind }: { kind: BillingDocumentKind }
           documentNoun={config.noun}
           onUseProfile={applyProfileDetails}
         />
+        {kind === "invoice" && values.sellerLogo ? (
+          <div className="flex flex-wrap items-center gap-3 rounded-lg border p-3">
+            {/* eslint-disable-next-line @next/next/no-img-element -- local data URL, not a remote image */}
+            <img
+              src={values.sellerLogo}
+              alt="Logo on this invoice"
+              data-testid="form-logo-preview"
+              className="max-h-12 max-w-40 object-contain"
+            />
+            <Button type="button" variant="ghost" size="sm" onClick={() => set("sellerLogo", "")}>
+              Remove logo from this invoice
+            </Button>
+          </div>
+        ) : null}
         {partyFields("seller")}
         {withGst ? (
           <div className="grid gap-4 sm:grid-cols-2">
@@ -401,6 +431,53 @@ export function BillingDocumentGenerator({ kind }: { kind: BillingDocumentKind }
         </div>
       </FormSection>
 
+      {kind === "invoice" ? (
+        <FormSection title="Payment">
+          <div className="grid gap-4 sm:grid-cols-2">
+            <FormField
+              id={fieldDomId("amountReceived")}
+              label="Amount received"
+              optional
+              hint="Leave empty if nothing has been received yet."
+              error={errorFor("amountReceived")}
+            >
+              {(control) => (
+                <AmountInput
+                  {...control}
+                  unit="₹"
+                  placeholder="0.00"
+                  value={values.amountReceived}
+                  onChange={(e) => set("amountReceived", e.target.value)}
+                  onBlur={() => touch("amountReceived")}
+                />
+              )}
+            </FormField>
+            {text("paymentMode", "Payment mode", values.paymentMode, (v) => set("paymentMode", v), {
+              multiline: true,
+              optional: true,
+              placeholder: "e.g. UPI: name@bank · Bank transfer: A/c 0000, IFSC XXXX0000000",
+            })}
+          </div>
+          {evaluation.balance ? (
+            <div
+              className="flex items-baseline justify-between rounded-lg bg-muted/60 p-4"
+              aria-live="polite"
+            >
+              <span className="text-sm font-medium">
+                {evaluation.balance.outcome === "overpaid" ? "Received in excess" : "Balance due"}
+              </span>
+              <span className="text-xl font-semibold tabular-nums" data-testid="form-balance-due">
+                {evaluation.balance.outcome === "overpaid"
+                  ? formatPaise(evaluation.balance.excessPaise)
+                  : evaluation.balance.outcome === "paid-in-full"
+                    ? "Nil — paid in full"
+                    : formatPaise(evaluation.balance.balanceDuePaise)}
+              </span>
+            </div>
+          ) : null}
+        </FormSection>
+      ) : null}
+
       <FormSection title="Notes and terms">
         {text("notes", "Notes or payment details", values.notes, (v) => set("notes", v), {
           multiline: true,
@@ -427,7 +504,13 @@ export function BillingDocumentGenerator({ kind }: { kind: BillingDocumentKind }
       onPrint={() => print(`${config.Noun} ${values.documentNumber.trim()}`)}
       draftPanel={<DraftPanel draft={draft} documentNoun={config.noun} />}
       form={formContent}
-      preview={<DocumentPreview values={values} evaluation={evaluation} />}
+      preview={
+        kind === "invoice" ? (
+          <InvoiceDocument values={values} evaluation={evaluation} />
+        ) : (
+          <DocumentPreview values={values} evaluation={evaluation} />
+        )
+      }
     />
   );
 }

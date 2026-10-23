@@ -1,5 +1,6 @@
 import { writeFailureReason, type DraftStorage } from "@/lib/drafts/draft-storage";
 import type { BusinessProfile } from "@/lib/profile/business-profile";
+import { isValidLogoDataUrl } from "@/lib/profile/logo";
 
 /**
  * BUSINESS PROFILE STORAGE (browser-local)
@@ -116,8 +117,78 @@ export function writeProfile(
 export function deleteProfile(storage: DraftStorage | null): boolean {
   if (!storage) return false;
   try {
-    for (const key of [PROFILE_STORAGE_KEY, ...otherVersionKeys(storage)]) storage.removeItem(key);
-    return storage.getItem(PROFILE_STORAGE_KEY) === null && otherVersionKeys(storage).length === 0;
+    const keys = [PROFILE_STORAGE_KEY, ...otherVersionKeys(storage), ...logoKeys(storage)];
+    for (const key of keys) storage.removeItem(key);
+    return (
+      storage.getItem(PROFILE_STORAGE_KEY) === null &&
+      otherVersionKeys(storage).length === 0 &&
+      logoKeys(storage).length === 0
+    );
+  } catch {
+    return false;
+  }
+}
+
+/* ───────────── logo (separate key, so the text profile format is unchanged) ───────────── */
+
+export const PROFILE_LOGO_KEY = `${KEY_PREFIX}v${PROFILE_VERSION}.logo`;
+
+function logoKeys(storage: DraftStorage): string[] {
+  const pattern = /^smartbill\.profile\.v\d+\.logo$/;
+  const keys: string[] = [];
+  for (let i = 0; i < storage.length; i++) {
+    const key = storage.key(i);
+    if (key !== null && pattern.test(key)) keys.push(key);
+  }
+  return keys;
+}
+
+export type LogoReadResult =
+  | { status: "none" }
+  | { status: "loaded"; dataUrl: string }
+  | { status: "invalid" }
+  | { status: "unavailable" };
+
+/** Reads the saved logo. Anything that is not a valid PNG/JPEG data URL is "invalid". */
+export function readLogo(storage: DraftStorage | null): LogoReadResult {
+  if (!storage) return { status: "unavailable" };
+  let raw: string | null;
+  try {
+    raw = storage.getItem(PROFILE_LOGO_KEY);
+  } catch {
+    return { status: "unavailable" };
+  }
+  if (raw === null) return { status: "none" };
+  try {
+    const parsed: unknown = JSON.parse(raw);
+    const e = parsed as Record<string, unknown> | null;
+    if (e && e.version === PROFILE_VERSION && isValidLogoDataUrl(e.dataUrl)) {
+      return { status: "loaded", dataUrl: e.dataUrl };
+    }
+  } catch {
+    // fall through
+  }
+  return { status: "invalid" };
+}
+
+export function writeLogo(storage: DraftStorage | null, dataUrl: string): ProfileWriteResult {
+  if (!storage) return { ok: false, reason: "unavailable" };
+  if (!isValidLogoDataUrl(dataUrl)) return { ok: false, reason: "error" };
+  const savedAt = new Date().toISOString();
+  try {
+    storage.setItem(PROFILE_LOGO_KEY, JSON.stringify({ version: PROFILE_VERSION, dataUrl }));
+    return { ok: true, savedAt };
+  } catch (error) {
+    return { ok: false, reason: writeFailureReason(error) };
+  }
+}
+
+/** Removes only the logo. Returns true only if, read back, no logo remains. */
+export function removeLogo(storage: DraftStorage | null): boolean {
+  if (!storage) return false;
+  try {
+    for (const key of logoKeys(storage)) storage.removeItem(key);
+    return logoKeys(storage).length === 0;
   } catch {
     return false;
   }

@@ -291,3 +291,33 @@ describe("draft shape checks", () => {
     expect(nextLineNumber(lines)).toBe(8);
   });
 });
+
+describe("drafts saved before the invoice payment and logo fields existed", () => {
+  const LOGO = `data:image/png;base64,${"A".repeat(100)}`;
+
+  it("still restore, with the new fields empty", () => {
+    const current = createEmptyDocument("invoice") as unknown as Record<string, unknown>;
+    const { amountReceived: _a, paymentMode: _p, sellerLogo: _l, ...older } = current;
+    void [_a, _p, _l];
+    expect(parseBillingDocumentDraft(older, "invoice")).toEqual(createEmptyDocument("invoice"));
+  });
+
+  it("keep new fields exactly as typed when present", () => {
+    const values = {
+      ...createEmptyDocument("invoice"),
+      amountReceived: "1000.5",
+      paymentMode: "UPI",
+      sellerLogo: LOGO,
+    };
+    expect(parseBillingDocumentDraft(values, "invoice")).toEqual(values);
+  });
+
+  it.each([
+    ["a non-text amount received", { amountReceived: 1000 }],
+    ["an SVG logo", { sellerLogo: "data:image/svg+xml;base64,PHN2Zz4=" }],
+    ["a logo that is not a data URL", { sellerLogo: "https://example.com/logo.png" }],
+  ])("reject %s", (_label, change) => {
+    const values = { ...createEmptyDocument("invoice"), ...change };
+    expect(parseBillingDocumentDraft(values, "invoice")).toBeNull();
+  });
+});

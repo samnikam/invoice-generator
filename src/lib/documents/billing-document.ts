@@ -10,7 +10,8 @@ import {
 } from "@/lib/documents/calculate-totals";
 import { InvalidInputError } from "@/lib/errors";
 import { NO_DISCOUNT, type Discount } from "@/lib/money/discount";
-import { parseRupees } from "@/lib/money/paise";
+import { calculateBalance, type PaymentBalance } from "@/lib/money/balance";
+import { parseRupees, type Paise } from "@/lib/money/paise";
 import { parsePercent } from "@/lib/money/percent";
 import { parseQuantity } from "@/lib/money/quantity";
 import { getGstRate, type GstRateId } from "@/lib/tax/gst-rates";
@@ -160,6 +161,15 @@ export type BillingDocumentValues = {
   notes: string;
   terms: string;
   roundOff: boolean;
+  /** Invoices only. Optional amount already received against this invoice (rupees text). */
+  amountReceived: string;
+  /** Invoices only. Optional payment mode / payment details shown on the invoice. */
+  paymentMode: string;
+  /**
+   * Invoices only. Optional logo copied from the business profile when the invoice is
+   * started (a validated PNG/JPEG data URL), or "" for no logo.
+   */
+  sellerLogo: string;
 };
 
 export function createEmptyLine(id: string): LineValues {
@@ -193,6 +203,9 @@ export function createEmptyDocument(kind: BillingDocumentKind): BillingDocumentV
     notes: "",
     terms: "",
     roundOff: false,
+    amountReceived: "",
+    paymentMode: "",
+    sellerLogo: "",
   };
 }
 
@@ -216,6 +229,11 @@ export type DocumentEvaluation = {
   totals: DocumentTotals | null;
   /** Parsed quantity and unit price per line (same order as the form), or null if invalid. */
   parsedLines: (Pick<LineItemInput, "quantity" | "unitPricePaise"> | null)[];
+  /**
+   * Invoices only: amount received and balance due, from the shared balance helper.
+   * null when no amount received is entered (or totals/amount are not yet valid).
+   */
+  balance: PaymentBalance | null;
 };
 
 const lineField = (id: string, name: keyof LineValues) => `lines.${id}.${name}`;
@@ -509,10 +527,39 @@ export function evaluateDocument(values: BillingDocumentValues): DocumentEvaluat
   add("notes", "Notes", optionalText(values.notes, "Notes", TEXT_LIMITS.notes));
   add("terms", "Terms", optionalText(values.terms, "Terms", TEXT_LIMITS.notes));
 
+  // Invoices only: payment mode and the optional amount received / balance due.
+  let balance: PaymentBalance | null = null;
+  if (values.kind === "invoice") {
+    add(
+      "paymentMode",
+      "Payment mode",
+      optionalText(values.paymentMode, "Payment mode", TEXT_LIMITS.address),
+    );
+    if (values.amountReceived.trim() !== "") {
+      let received: Paise | null = null;
+      let receivedError: string | undefined;
+      try {
+        received = parseRupees(values.amountReceived, "amountReceived", "Amount received");
+      } catch (error) {
+        if (!(error instanceof InvalidInputError)) throw error;
+        receivedError = error.message;
+      }
+      if (received === 0) {
+        receivedError =
+          "Amount received must be more than ₹0. Leave it empty if nothing has been received.";
+      }
+      add("amountReceived", "Amount received", receivedError);
+      if (!receivedError && received !== null && totals) {
+        // Shared helper: an overpayment is reported as "overpaid" with the excess.
+        balance = calculateBalance(totals.grandTotalPaise, 0 as Paise, received);
+      }
+    }
+  }
+
   const errors: Record<FieldKey, string> = {};
   for (const issue of issues) errors[issue.field] = issue.message;
   const allParsedLines = values.lines.map((_, index) => parsedLines[index] ?? null);
-  return { issues, errors, totals, parsedLines: allParsedLines };
+  return { issues, errors, totals, parsedLines: allParsedLines, balance };
 }
 
 /** Points an engine error (e.g. "lines[2].discount") at the matching form field. */

@@ -5,6 +5,7 @@ import {
   type LineValues,
   type PartyValues,
 } from "@/lib/documents/billing-document";
+import { isValidLogoDataUrl } from "@/lib/profile/logo";
 import { PAYMENT_METHODS, type ContactValues, type ReceiptValues } from "@/lib/receipts/receipt";
 
 /**
@@ -30,6 +31,21 @@ function record(value: unknown): Record<string, unknown> {
 
 function text(value: unknown): string {
   if (typeof value !== "string" || value.length > MAX_TEXT) throw new ShapeError();
+  return value;
+}
+
+/**
+ * Fields added after drafts were first saved (version 1 still). A draft saved before the
+ * field existed simply has no value: treat it as empty so older drafts keep restoring.
+ * A value that IS present must still be valid.
+ */
+function addedText(value: unknown): string {
+  return value === undefined ? "" : text(value);
+}
+
+function addedLogo(value: unknown): string {
+  if (value === undefined || value === "") return "";
+  if (!isValidLogoDataUrl(value)) throw new ShapeError();
   return value;
 }
 
@@ -111,6 +127,9 @@ export function parseBillingDocumentDraft(
       notes: text(v.notes),
       terms: text(v.terms),
       roundOff: flag(v.roundOff),
+      amountReceived: addedText(v.amountReceived),
+      paymentMode: addedText(v.paymentMode),
+      sellerLogo: addedLogo(v.sellerLogo),
     };
   } catch (error) {
     if (error instanceof ShapeError) return null;

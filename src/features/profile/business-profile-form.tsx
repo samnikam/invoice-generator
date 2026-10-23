@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
-import { CircleAlert, Info, Save, ShieldAlert, Trash2 } from "lucide-react";
+import { CircleAlert, ImageUp, Info, Save, ShieldAlert, Trash2, X } from "lucide-react";
 import { cn } from "cn";
 
 import { ErrorSummary } from "@/components/documents/error-summary";
@@ -19,7 +19,8 @@ import {
   stateFromGstin,
   type BusinessProfile,
 } from "@/lib/profile/business-profile";
-import { deleteProfile, writeProfile } from "@/lib/profile/profile-storage";
+import { prepareLogo } from "@/lib/profile/logo";
+import { deleteProfile, removeLogo, writeLogo, writeProfile } from "@/lib/profile/profile-storage";
 
 const domId = (field: string) => `profile-${field}`;
 const timeFormatter = new Intl.DateTimeFormat("en-IN", { hour: "numeric", minute: "2-digit" });
@@ -29,6 +30,8 @@ type Feedback =
   | { kind: "deleted" }
   | { kind: "deleteFailed" }
   | { kind: "failed"; reason: "quota" | "unavailable" | "error" }
+  /** The text profile was saved, but the logo could not be stored or removed. */
+  | { kind: "logoFailed"; reason: "quota" | "unavailable" | "error" }
   | null;
 
 const FAILURE_TEXT = {
@@ -39,6 +42,13 @@ const FAILURE_TEXT = {
   error: "Could not save the profile. Your details are still on screen.",
 } as const;
 
+const LOGO_FAILURE_TEXT = {
+  quota:
+    "Profile saved, but the logo could not be saved: this browser's storage is full. Try a smaller logo.",
+  unavailable: "Profile saved, but the logo could not be saved: this browser is blocking storage.",
+  error: "Profile saved, but the logo could not be saved or removed. Please try again.",
+} as const;
+
 /** Form to save business details once, in this browser, for reuse on new documents. */
 export function BusinessProfileForm() {
   const saved = useSavedProfile();
@@ -47,6 +57,10 @@ export function BusinessProfileForm() {
   const [showAll, setShowAll] = useState(false);
   const [feedback, setFeedback] = useState<Feedback>(null);
   const [loadedFrom, setLoadedFrom] = useState<string | null>(null);
+  /** Logo in the form (PNG/JPEG data URL) or "" for none. Stored only on Save. */
+  const [logo, setLogo] = useState("");
+  const [logoMessage, setLogoMessage] = useState<string | null>(null);
+  const [processingLogo, setProcessingLogo] = useState(false);
   const summaryRef = useRef<HTMLDivElement>(null);
 
   // Put the saved profile into the form once it has been read (after page load).
@@ -54,6 +68,7 @@ export function BusinessProfileForm() {
     if (saved.state === "loaded" && loadedFrom !== saved.savedAt) {
       /* eslint-disable react-hooks/set-state-in-effect -- sync form with the profile just read */
       setValues(saved.profile);
+      setLogo(saved.logo ?? "");
       setLoadedFrom(saved.savedAt);
       /* eslint-enable react-hooks/set-state-in-effect */
     }
@@ -70,10 +85,12 @@ export function BusinessProfileForm() {
   };
 
   const storedProfile = saved.state === "loaded" ? saved.profile : null;
+  const storedLogo = saved.state === "loaded" ? (saved.logo ?? "") : "";
   const unsaved =
     storedProfile !== null
-      ? JSON.stringify(normaliseProfile(values)) !== JSON.stringify(storedProfile)
-      : Object.values(values).some((v) => v.trim() !== "");
+      ? JSON.stringify(normaliseProfile(values)) !== JSON.stringify(storedProfile) ||
+        logo !== storedLogo
+      : Object.values(values).some((v) => v.trim() !== "") || logo !== "";
   const gstinState = stateFromGstin(values.gstin);
   const blocked = saved.state === "unavailable";
 
@@ -83,12 +100,22 @@ export function BusinessProfileForm() {
       requestAnimationFrame(() => summaryRef.current?.focus());
       return;
     }
+    const storage = getBrowserStorage();
     const profile = normaliseProfile(values);
-    const result = writeProfile(getBrowserStorage(), profile);
+    const result = writeProfile(storage, profile);
     if (result.ok) {
       setValues(profile);
       setLoadedFrom(result.savedAt);
       setFeedback({ kind: "saved", savedAt: result.savedAt });
+      // The logo has its own key; only touch it when it actually changed.
+      if (logo !== storedLogo) {
+        const logoResult = logo
+          ? writeLogo(storage, logo)
+          : removeLogo(storage)
+            ? ({ ok: true } as const)
+            : ({ ok: false, reason: "error" } as const);
+        if (!logoResult.ok) setFeedback({ kind: "logoFailed", reason: logoResult.reason });
+      }
       saved.refresh();
     } else {
       setFeedback({ kind: "failed", reason: result.reason });
@@ -106,6 +133,8 @@ export function BusinessProfileForm() {
       return;
     }
     setValues(createEmptyProfile());
+    setLogo("");
+    setLogoMessage(null);
     setTouched(new Set());
     setShowAll(false);
     setLoadedFrom(null);
@@ -141,9 +170,11 @@ export function BusinessProfileForm() {
           ? "Could not delete the profile: this browser is blocking storage. It is still saved here."
           : feedback?.kind === "failed"
             ? FAILURE_TEXT[feedback.reason]
-            : unsaved && saved.state !== "checking"
-              ? "You have unsaved changes."
-              : "";
+            : feedback?.kind === "logoFailed"
+              ? LOGO_FAILURE_TEXT[feedback.reason]
+              : unsaved && saved.state !== "checking"
+                ? "You have unsaved changes."
+                : "";
 
   return (
     <div className="max-w-3xl space-y-6">
@@ -158,7 +189,8 @@ export function BusinessProfileForm() {
           <p>
             New invoices, quotations and receipts are filled from this profile. Documents and drafts
             you have already started keep their own copy, so changes here do not alter them.
-            Receipts never include the GSTIN or state.
+            Receipts never include the GSTIN or state. A logo, if you add one, is shown on invoices
+            only; it is resized and re-saved here, which removes hidden photo data.
           </p>
         </div>
       </div>
@@ -204,7 +236,9 @@ export function BusinessProfileForm() {
           data-testid="profile-status"
           className={cn(
             "text-sm",
-            feedback?.kind === "failed" || feedback?.kind === "deleteFailed"
+            feedback?.kind === "failed" ||
+              feedback?.kind === "deleteFailed" ||
+              feedback?.kind === "logoFailed"
               ? "text-destructive"
               : "text-muted-foreground",
           )}
@@ -248,6 +282,76 @@ export function BusinessProfileForm() {
               inputMode: "email",
               autoComplete: "email",
             })}
+          </div>
+        </FormSection>
+
+        <FormSection title="Logo">
+          <p className="text-sm text-muted-foreground">
+            Optional. Shown at the top of your invoices. PNG or JPEG only; it is resized to fit 400
+            × 160 pixels.
+          </p>
+          {logo ? (
+            <div className="flex flex-wrap items-center gap-4">
+              {/* eslint-disable-next-line @next/next/no-img-element -- local data URL, not a remote image */}
+              <img
+                src={logo}
+                alt="Business logo preview"
+                data-testid="profile-logo-preview"
+                className="max-h-20 max-w-60 rounded-md border bg-white object-contain p-2"
+              />
+              <Button
+                type="button"
+                variant="ghost"
+                onClick={() => {
+                  setLogo("");
+                  setLogoMessage(null);
+                  setFeedback(null);
+                }}
+              >
+                <X data-icon="inline-start" />
+                Remove logo
+              </Button>
+            </div>
+          ) : null}
+          <div className="space-y-2">
+            <label
+              htmlFor={domId("logo")}
+              className="inline-flex cursor-pointer items-center gap-2 rounded-lg border px-3 py-2 text-sm font-medium hover:bg-muted"
+            >
+              <ImageUp aria-hidden="true" className="size-4" />
+              {logo ? "Choose a different logo" : "Choose logo"}
+            </label>
+            <input
+              id={domId("logo")}
+              type="file"
+              accept="image/png,image/jpeg"
+              aria-describedby={logoMessage ? `${domId("logo")}-error` : undefined}
+              className="sr-only"
+              disabled={processingLogo}
+              onChange={async (e) => {
+                const file = e.target.files?.[0];
+                e.target.value = ""; // allow choosing the same file again
+                if (!file) return;
+                setProcessingLogo(true);
+                const result = await prepareLogo(file);
+                setProcessingLogo(false);
+                setFeedback(null);
+                if (result.ok) {
+                  setLogo(result.dataUrl);
+                  setLogoMessage(null);
+                } else {
+                  setLogoMessage(result.message);
+                }
+              }}
+            />
+            {processingLogo ? (
+              <p className="text-sm text-muted-foreground">Preparing logo…</p>
+            ) : null}
+            {logoMessage ? (
+              <p id={`${domId("logo")}-error`} role="alert" className="text-sm text-destructive">
+                {logoMessage}
+              </p>
+            ) : null}
           </div>
         </FormSection>
 

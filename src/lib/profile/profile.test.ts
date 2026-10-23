@@ -14,8 +14,12 @@ import {
 import {
   deleteProfile,
   parseStoredProfile,
+  PROFILE_LOGO_KEY,
   PROFILE_STORAGE_KEY,
+  readLogo,
   readProfile,
+  removeLogo,
+  writeLogo,
   writeProfile,
 } from "@/lib/profile/profile-storage";
 
@@ -237,5 +241,79 @@ describe("profile storage", () => {
     storage.data.set("unrelated", "keep");
     expect(deleteProfile(storage)).toBe(true);
     expect([...storage.data.keys()].sort()).toEqual(["smartbill.draft.v1.invoice", "unrelated"]);
+  });
+});
+
+describe("logo storage", () => {
+  const LOGO = "data:image/png;base64,iVBORw0KGgo=";
+
+  it("saves under its own versioned key and reads it back exactly", () => {
+    const storage = memoryStorage();
+    expect(PROFILE_LOGO_KEY).toBe("smartbill.profile.v1.logo");
+    expect(writeLogo(storage, LOGO).ok).toBe(true);
+    expect(readLogo(storage)).toEqual({ status: "loaded", dataUrl: LOGO });
+    // The text profile is not touched.
+    expect(storage.data.has(PROFILE_STORAGE_KEY)).toBe(false);
+  });
+
+  it("refuses to store or read anything other than a PNG/JPEG data URL", () => {
+    const storage = memoryStorage();
+    expect(writeLogo(storage, "data:image/svg+xml;base64,PHN2Zy8+")).toEqual({
+      ok: false,
+      reason: "error",
+    });
+    expect(storage.data.size).toBe(0);
+    storage.data.set(PROFILE_LOGO_KEY, JSON.stringify({ version: 1, dataUrl: "https://x/y.png" }));
+    expect(readLogo(storage)).toEqual({ status: "invalid" });
+    storage.data.set(PROFILE_LOGO_KEY, "{oops");
+    expect(readLogo(storage)).toEqual({ status: "invalid" });
+  });
+
+  it("reports missing, blocked and full storage", () => {
+    expect(readLogo(memoryStorage())).toEqual({ status: "none" });
+    expect(readLogo(null)).toEqual({ status: "unavailable" });
+    const full = memoryStorage(() => new DOMException("full", "QuotaExceededError"));
+    expect(writeLogo(full, LOGO)).toEqual({ ok: false, reason: "quota" });
+  });
+
+  it("removes the logo (any version) and leaves the profile and drafts alone", () => {
+    const storage = memoryStorage();
+    writeProfile(storage, PROFILE);
+    writeLogo(storage, LOGO);
+    storage.data.set("smartbill.profile.v0.logo", "{}");
+    writeDraft(storage, "invoice", createEmptyDocument("invoice"));
+    expect(removeLogo(storage)).toBe(true);
+    expect([...storage.data.keys()].sort()).toEqual([
+      "smartbill.draft.v1.invoice",
+      "smartbill.profile.v1",
+    ]);
+  });
+
+  it("reports a silently ignored logo removal as a failure", () => {
+    const storage = memoryStorage();
+    writeLogo(storage, LOGO);
+    storage.removeItem = () => {};
+    expect(removeLogo(storage)).toBe(false);
+    expect(removeLogo(null)).toBe(false);
+  });
+
+  it("deleting the profile also deletes the logo", () => {
+    const storage = memoryStorage();
+    writeProfile(storage, PROFILE);
+    writeLogo(storage, LOGO);
+    storage.data.set("unrelated", "keep");
+    expect(deleteProfile(storage)).toBe(true);
+    expect([...storage.data.keys()]).toEqual(["unrelated"]);
+  });
+
+  it("a logo left behind after deleting the profile is reported as a failure", () => {
+    const storage = memoryStorage();
+    writeProfile(storage, PROFILE);
+    writeLogo(storage, LOGO);
+    const remove = storage.removeItem;
+    storage.removeItem = (k) => {
+      if (k !== PROFILE_LOGO_KEY) remove(k);
+    };
+    expect(deleteProfile(storage)).toBe(false);
   });
 });
