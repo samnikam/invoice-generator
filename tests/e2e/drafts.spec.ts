@@ -92,20 +92,22 @@ test.describe("draft saving", () => {
       void d.dismiss();
     });
     await page.getByRole("button", { name: "Clear form" }).click();
-    expect(message).toBe("Clear all invoice details? This cannot be undone.");
+    // The dialog handler runs asynchronously, so wait for it to record the message.
+    await expect.poll(() => message).toBe("Clear all invoice details? This cannot be undone.");
 
     await toggle(page).check();
     await expect(status(page)).toContainText("Saved");
 
     // Cancelling keeps both the form and the draft.
+    message = ""; // so the first message cannot satisfy the next check
     page.once("dialog", (d) => {
       message = d.message();
       void d.dismiss();
     });
     await page.getByRole("button", { name: "Clear form" }).click();
-    expect(message).toContain(
-      "the draft saved in this browser will also be replaced with the empty form",
-    );
+    await expect
+      .poll(() => message)
+      .toContain("the draft saved in this browser will also be replaced with the empty form");
     await expect(page.getByLabel("Business name")).toHaveValue("Before clearing");
     expect((await stored(page, KEYS.invoice))?.values.seller).toMatchObject({
       name: "Before clearing",
