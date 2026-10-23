@@ -188,6 +188,33 @@ describe("deleteDraft", () => {
   });
 });
 
+describe("deleteDraft reports failure honestly", () => {
+  it("returns false (and keeps the draft) when the browser refuses the deletion", () => {
+    const storage = memoryStorage();
+    writeDraft(storage, "invoice", createEmptyDocument("invoice"));
+    storage.removeItem = () => {
+      throw new DOMException("denied", "SecurityError");
+    };
+    expect(deleteDraft(storage, "invoice")).toBe(false);
+    expect(storage.data.has("smartbill.draft.v1.invoice")).toBe(true);
+  });
+
+  it("returns false when the deletion is silently ignored (checked by reading back)", () => {
+    const storage = memoryStorage();
+    writeDraft(storage, "invoice", createEmptyDocument("invoice"));
+    storage.removeItem = () => {};
+    expect(deleteDraft(storage, "invoice")).toBe(false);
+  });
+
+  it("returns false when storage is unavailable", () => {
+    expect(deleteDraft(null, "invoice")).toBe(false);
+  });
+
+  it("returns true when there was nothing to delete", () => {
+    expect(deleteDraft(memoryStorage(), "receipt")).toBe(true);
+  });
+});
+
 describe("draft shape checks", () => {
   it("accepts a valid quotation and rejects it as an invoice", () => {
     const quotation = createEmptyDocument("quotation");

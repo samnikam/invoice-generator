@@ -19,6 +19,9 @@ function statusText(status: DraftStatus): string {
     case "unavailable":
       return "Draft saving is not available because this browser is blocking storage (for example in some private-browsing modes). Your details stay on screen until you refresh.";
     case "error":
+      if (status.reason === "delete") {
+        return "Could not delete the draft: this browser is blocking storage. The draft may still be stored in this browser, so saving is still on.";
+      }
       return status.reason === "quota"
         ? "Could not save: this browser's storage is full. Free up space, or turn off draft saving. Your details are still on screen."
         : status.reason === "unavailable"

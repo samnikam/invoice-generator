@@ -20,7 +20,7 @@ export type DraftStatus =
   | { state: "off" }
   | { state: "saving" }
   | { state: "saved"; savedAt: string }
-  | { state: "error"; reason: "quota" | "unavailable" | "error" };
+  | { state: "error"; reason: "quota" | "unavailable" | "error" | "delete" };
 
 export type LocalDraft = {
   /** True while saving is turned on for this document type. */
@@ -60,7 +60,7 @@ export function useLocalDraft<T>({
   /** JSON of the values most recently written, to tell "saved" from "saving". */
   const [savedJson, setSavedJson] = useState<string | null>(null);
   const [savedAt, setSavedAt] = useState<string | null>(null);
-  const [failure, setFailure] = useState<"quota" | "unavailable" | "error" | null>(null);
+  const [failure, setFailure] = useState<"quota" | "unavailable" | "error" | "delete" | null>(null);
 
   // Keep the latest callbacks without re-running the mount effect.
   const parseRef = useRef(parse);
@@ -128,7 +128,12 @@ export function useLocalDraft<T>({
       "Stop saving and delete the draft stored in this browser? The details on screen stay until you leave or refresh the page.",
     );
     if (!confirmed) return;
-    deleteDraft(storageRef.current, kind);
+    if (!deleteDraft(storageRef.current, kind)) {
+      // Not deleted: keep saving on (checkbox stays ticked) and say so, rather than
+      // implying the draft is gone. The form on screen is left exactly as it is.
+      setFailure("delete");
+      return;
+    }
     setEnabled(false);
     setSavedJson(null);
     setSavedAt(null);

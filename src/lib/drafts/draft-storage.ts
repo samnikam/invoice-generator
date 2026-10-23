@@ -129,12 +129,16 @@ export function writeDraft(
   }
 }
 
-/** Deletes this document type's draft, including drafts left by other versions. */
+/**
+ * Deletes this document type's draft, including drafts left by other versions.
+ * Returns true only if, read back afterwards, no draft of this type remains — so a
+ * browser that refuses or silently ignores the deletion is reported as a failure.
+ */
 export function deleteDraft(storage: DraftStorage | null, kind: DraftKind): boolean {
   if (!storage) return false;
   try {
     for (const key of draftKeysFor(storage, kind)) storage.removeItem(key);
-    return true;
+    return draftKeysFor(storage, kind).length === 0;
   } catch {
     return false;
   }

@@ -266,6 +266,30 @@ test.describe("draft saving", () => {
     expect(await draftKeys(page)).toEqual([KEYS.receipt]);
   });
 
+  test("a failed deletion keeps saving on and says the draft may still be stored", async ({
+    page,
+  }) => {
+    await open(page, "/invoices/new");
+    await page.getByLabel("Business name").fill("Keep me");
+    await toggle(page).check();
+    await expect(status(page)).toContainText("Saved");
+
+    // From now on the browser refuses deletions.
+    await page.evaluate(() => {
+      Storage.prototype.removeItem = function () {
+        throw new DOMException("denied", "SecurityError");
+      };
+    });
+    page.once("dialog", (d) => d.accept());
+    await toggle(page).click(); // click: the checkbox correctly stays ticked
+    await expect(status(page)).toContainText(
+      "Could not delete the draft: this browser is blocking storage. The draft may still be stored in this browser, so saving is still on.",
+    );
+    await expect(toggle(page)).toBeChecked();
+    await expect(page.getByLabel("Business name")).toHaveValue("Keep me");
+    expect((await stored(page, KEYS.invoice))?.values.seller).toMatchObject({ name: "Keep me" });
+  });
+
   test("a damaged draft is not loaded, does not break the page, and can be replaced", async ({
     page,
   }) => {
