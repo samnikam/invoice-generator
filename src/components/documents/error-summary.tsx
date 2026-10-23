@@ -10,10 +10,13 @@ export type SummaryIssue = { field: string; label: string; message: string };
 export function ErrorSummary({
   issues,
   domId,
+  action = "printing",
   ref,
 }: {
   issues: readonly SummaryIssue[];
   domId: (field: string) => string;
+  /** What the problems block, e.g. "printing" or "saving". */
+  action?: string;
   ref?: Ref<HTMLDivElement>;
 }) {
   return (
@@ -25,7 +28,7 @@ export function ErrorSummary({
     >
       <p className="flex items-center gap-2 font-semibold text-destructive">
         <CircleAlert aria-hidden="true" className="size-4" />
-        Please fix {issues.length} {issues.length === 1 ? "problem" : "problems"} before printing
+        Please fix {issues.length} {issues.length === 1 ? "problem" : "problems"} before {action}
       </p>
       <ul className="mt-2 list-disc space-y-1 pl-6">
         {issues.map((issue) => (

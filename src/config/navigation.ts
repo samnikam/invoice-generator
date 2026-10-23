@@ -1,4 +1,4 @@
-import { LayoutDashboard } from "lucide-react";
+import { Building2, LayoutDashboard } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 
 import { features } from "@/config/features";
@@ -40,4 +40,8 @@ export const appNav: AppNavGroup[] = [
     items: [featureNavItem("invoices"), featureNavItem("quotations"), featureNavItem("receipts")],
   },
   { label: "Tools", items: [featureNavItem("calculators")] },
+  {
+    label: "Settings",
+    items: [{ title: "Business profile", icon: Building2, href: "/settings/business" }],
+  },
 ];

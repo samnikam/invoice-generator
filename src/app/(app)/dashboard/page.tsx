@@ -3,6 +3,7 @@ import Link from "next/link";
 import { ArrowRight, HardDrive, Info } from "lucide-react";
 
 import { FeatureStatusBadge } from "@/components/feature-status-badge";
+import { ProfilePrompt } from "@/components/profile/profile-prompt";
 import { Button } from "@/components/ui/button";
 import { features } from "@/config/features";
 import { siteConfig } from "@/config/site";
@@ -45,6 +46,8 @@ export default function DashboardPage() {
         </div>
       ) : null}
 
+      <ProfilePrompt />
+
       <section aria-labelledby="tools-heading">
         <h2 id="tools-heading" className="text-lg font-semibold">
           Your tools
@@ -85,8 +88,9 @@ export default function DashboardPage() {
             About your data
           </h2>
           <p className="mt-1 leading-relaxed text-muted-foreground">
-            No account is needed. What you enter stays in your browser tab and is never uploaded or
-            saved — refreshing the page clears it. Print or save a PDF to keep a copy.
+            No account is needed and nothing is ever uploaded. Details are kept only if you choose
+            to save a draft or your business profile — and then only in this browser on this device,
+            not encrypted. Print or save a PDF to keep a copy of a document.
           </p>
         </div>
       </section>

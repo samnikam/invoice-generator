@@ -39,7 +39,7 @@ const benefits = [
     icon: ShieldCheck,
     title: "Private by default",
     description:
-      "No sign-up needed. What you enter stays in your browser tab and is never uploaded or saved.",
+      "No sign-up needed and nothing is uploaded. Details are kept only if you choose to save them, and then only in your own browser.",
   },
 ] as const;
 

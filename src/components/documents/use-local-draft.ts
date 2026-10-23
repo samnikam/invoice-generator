@@ -46,11 +46,18 @@ export function useLocalDraft<T>({
   values,
   parse,
   restore,
+  onNoDraft,
 }: {
   kind: DraftKind;
   values: T;
   parse: (raw: unknown) => T | null;
   restore: (values: T) => void;
+  /**
+   * Called once after mount when no draft was restored (none, unreadable or storage
+   * blocked) — e.g. to fill a new document from the business profile. Never called
+   * when a draft is restored, so a saved draft always takes priority.
+   */
+  onNoDraft?: () => void;
 }): LocalDraft {
   const storageRef = useRef<DraftStorage | null>(null);
   const [checked, setChecked] = useState(false);
@@ -65,9 +72,11 @@ export function useLocalDraft<T>({
   // Keep the latest callbacks without re-running the mount effect.
   const parseRef = useRef(parse);
   const restoreRef = useRef(restore);
+  const onNoDraftRef = useRef(onNoDraft);
   useEffect(() => {
     parseRef.current = parse;
     restoreRef.current = restore;
+    onNoDraftRef.current = onNoDraft;
   });
 
   // After mount: check storage and restore an existing draft (browser only).
@@ -83,8 +92,9 @@ export function useLocalDraft<T>({
       setEnabled(true);
       setSavedJson(JSON.stringify(result.values));
       setSavedAt(result.savedAt);
-    } else if (result.status === "invalid") {
-      setNotice("unreadable");
+    } else {
+      if (result.status === "invalid") setNotice("unreadable");
+      onNoDraftRef.current?.();
     }
     /* eslint-enable react-hooks/set-state-in-effect */
   }, [kind]);

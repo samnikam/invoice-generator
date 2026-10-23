@@ -11,6 +11,8 @@ import { clearFormMessage, useLocalDraft } from "@/components/documents/use-loca
 import { FormField } from "@/components/forms/form-field";
 import { ProvisionalRateNotice, StateSelect } from "@/components/forms/tax-selects";
 import { TextField } from "@/components/forms/text-field";
+import { ProfileFillBar } from "@/components/profile/profile-fill-bar";
+import { useSavedProfile } from "@/components/profile/use-saved-profile";
 import { Label } from "@/components/ui/label";
 import { todayIsoDate } from "@/lib/dates";
 import {
@@ -26,7 +28,10 @@ import {
   type PartyValues,
 } from "@/lib/documents/billing-document";
 import { nextLineNumber, parseBillingDocumentDraft } from "@/lib/drafts/draft-shapes";
+import { getBrowserStorage } from "@/lib/drafts/draft-storage";
 import { formatPaise } from "@/lib/money/format";
+import { toSellerFields } from "@/lib/profile/business-profile";
+import { readProfile } from "@/lib/profile/profile-storage";
 
 import { DocumentPreview } from "./document-preview";
 import { LineItemsEditor } from "./line-items-editor";
@@ -49,6 +54,7 @@ export function BillingDocumentGenerator({ kind }: { kind: BillingDocumentKind }
   const config = DOCUMENT_KINDS[kind];
   const [values, setValues] = useState<BillingDocumentValues>(() => createEmptyDocument(kind));
   const nextLineId = useRef(2);
+  const [filledFromProfile, setFilledFromProfile] = useState(false);
   const focusLineId = useRef<string | null>(null);
 
   const evaluation = useMemo(() => evaluateDocument(values), [values]);
@@ -72,7 +78,30 @@ export function BillingDocumentGenerator({ kind }: { kind: BillingDocumentKind }
       nextLineId.current = nextLineNumber(saved.lines);
       setValues(saved);
     },
+    // Only when no draft was restored: fill a new document from the saved profile.
+    onNoDraft: () => {
+      const profile = readProfile(getBrowserStorage());
+      if (profile.status !== "loaded") return;
+      setValues((v) => ({ ...v, seller: toSellerFields(profile.profile) }));
+      setFilledFromProfile(true);
+    },
   });
+  const savedProfile = useSavedProfile();
+
+  /** Replaces only the business fields with the saved profile, after confirmation. */
+  function applyProfileDetails() {
+    const profile = readProfile(getBrowserStorage());
+    if (profile.status !== "loaded") {
+      savedProfile.refresh();
+      return;
+    }
+    const confirmed = window.confirm(
+      `Replace the business name, address, phone, email, GSTIN and state in this ${config.noun} with your saved business profile? Customer, items and other details are not changed.`,
+    );
+    if (!confirmed) return;
+    setValues((v) => ({ ...v, seller: toSellerFields(profile.profile) }));
+    setFilledFromProfile(true);
+  }
 
   // After "Add item", move keyboard focus to the new item's description.
   useEffect(() => {
@@ -101,6 +130,7 @@ export function BillingDocumentGenerator({ kind }: { kind: BillingDocumentKind }
     if (!window.confirm(clearFormMessage(config.noun, draft.enabled))) return;
     nextLineId.current = 2;
     setValues({ ...createEmptyDocument(kind), issueDate: todayIsoDate() });
+    setFilledFromProfile(false);
     resetInteraction();
   }
 
@@ -225,6 +255,12 @@ export function BillingDocumentGenerator({ kind }: { kind: BillingDocumentKind }
       </FormSection>
 
       <FormSection title="Your business">
+        <ProfileFillBar
+          saved={savedProfile}
+          filledFromProfile={filledFromProfile}
+          documentNoun={config.noun}
+          onUseProfile={applyProfileDetails}
+        />
         {partyFields("seller")}
         {withGst ? (
           <div className="grid gap-4 sm:grid-cols-2">

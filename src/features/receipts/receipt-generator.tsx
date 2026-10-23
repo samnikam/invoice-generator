@@ -11,12 +11,17 @@ import { clearFormMessage, useLocalDraft } from "@/components/documents/use-loca
 import { AmountInput } from "@/components/forms/amount-input";
 import { FormField } from "@/components/forms/form-field";
 import { TextField } from "@/components/forms/text-field";
+import { ProfileFillBar } from "@/components/profile/profile-fill-bar";
+import { useSavedProfile } from "@/components/profile/use-saved-profile";
 import { NativeSelect } from "@/components/ui/native-select";
 import { todayIsoDate } from "@/lib/dates";
 import { fieldDomId } from "@/lib/documents/billing-document";
 import { parseReceiptDraft } from "@/lib/drafts/draft-shapes";
+import { getBrowserStorage } from "@/lib/drafts/draft-storage";
 import { amountInWords } from "@/lib/money/amount-in-words";
 import { formatPaise } from "@/lib/money/format";
+import { toReceiptBusiness } from "@/lib/profile/business-profile";
+import { readProfile } from "@/lib/profile/profile-storage";
 import {
   createEmptyReceipt,
   evaluateReceipt,
@@ -34,6 +39,7 @@ type Party = "business" | "payer";
 /** Form + live preview for a payment receipt. */
 export function ReceiptGenerator() {
   const [values, setValues] = useState<ReceiptValues>(createEmptyReceipt);
+  const [filledFromProfile, setFilledFromProfile] = useState(false);
   const evaluation = useMemo(() => evaluateReceipt(values), [values]);
   const ready = evaluation.issues.length === 0 && evaluation.amountPaise !== null;
   const { touch, errorFor, showSummary, summaryRef, view, setView, print, resetInteraction } =
@@ -51,7 +57,31 @@ export function ReceiptGenerator() {
     values,
     parse: parseReceiptDraft,
     restore: setValues,
+    // Only when no draft was restored: fill a new receipt from the saved profile
+    // (contact details only — never GSTIN or state).
+    onNoDraft: () => {
+      const profile = readProfile(getBrowserStorage());
+      if (profile.status !== "loaded") return;
+      setValues((v) => ({ ...v, business: toReceiptBusiness(profile.profile) }));
+      setFilledFromProfile(true);
+    },
   });
+  const savedProfile = useSavedProfile();
+
+  /** Replaces only the business contact fields with the saved profile, after confirmation. */
+  function applyProfileDetails() {
+    const profile = readProfile(getBrowserStorage());
+    if (profile.status !== "loaded") {
+      savedProfile.refresh();
+      return;
+    }
+    const confirmed = window.confirm(
+      "Replace the business name, address, phone and email in this receipt with your saved business profile? Other details are not changed.",
+    );
+    if (!confirmed) return;
+    setValues((v) => ({ ...v, business: toReceiptBusiness(profile.profile) }));
+    setFilledFromProfile(true);
+  }
 
   const set = <K extends keyof ReceiptValues>(key: K, value: ReceiptValues[K]) =>
     setValues((v) => ({ ...v, [key]: value }));
@@ -61,6 +91,7 @@ export function ReceiptGenerator() {
   function clearForm() {
     if (!window.confirm(clearFormMessage("receipt", draft.enabled))) return;
     setValues({ ...createEmptyReceipt(), paymentDate: todayIsoDate() });
+    setFilledFromProfile(false);
     resetInteraction();
   }
 
@@ -160,6 +191,12 @@ export function ReceiptGenerator() {
       ) : null}
 
       <FormSection title="Your business">
+        <ProfileFillBar
+          saved={savedProfile}
+          filledFromProfile={filledFromProfile}
+          documentNoun="receipt"
+          onUseProfile={applyProfileDetails}
+        />
         {contactFields("business", "Business name", true)}
       </FormSection>
 

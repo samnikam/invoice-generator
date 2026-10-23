@@ -59,7 +59,8 @@ export function getBrowserStorage(): DraftStorage | null {
   }
 }
 
-function writeFailureReason(error: unknown): "quota" | "unavailable" | "error" {
+/** Classifies a failed localStorage write. Shared with the business profile store. */
+export function writeFailureReason(error: unknown): "quota" | "unavailable" | "error" {
   if (!(error instanceof DOMException)) return "error";
   if (
     error.name === "QuotaExceededError" ||
