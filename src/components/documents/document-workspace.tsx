@@ -1,14 +1,14 @@
 "use client";
 
 import type { ReactNode } from "react";
-import { Eraser, Info, Printer } from "lucide-react";
+import { Eraser, Printer } from "lucide-react";
 import { cn } from "cn";
 
 import { Button } from "@/components/ui/button";
 
 /**
- * Page frame shared by the document generators: title, Clear / Print actions, privacy
- * note, and the form + live preview. Below 1536px wide, an "Edit details / Preview"
+ * Page frame shared by the document generators: title, Clear / Print actions, the
+ * draft-saving panel, and the form + live preview. Below 1536px wide, an "Edit details / Preview"
  * switch shows one at a time; wider screens show both side by side.
  *
  * Printing: everything except the preview is hidden (print:hidden), and the preview is
@@ -22,6 +22,7 @@ export function DocumentWorkspace({
   onViewChange,
   onClear,
   onPrint,
+  draftPanel,
   form,
   preview,
 }: {
@@ -33,6 +34,8 @@ export function DocumentWorkspace({
   onViewChange: (view: "edit" | "preview") => void;
   onClear: () => void;
   onPrint: () => void;
+  /** Draft-saving control (see DraftPanel). */
+  draftPanel: ReactNode;
   form: ReactNode;
   preview: ReactNode;
 }) {
@@ -55,10 +58,10 @@ export function DocumentWorkspace({
         </div>
       </div>
 
-      <p className="flex gap-2 rounded-lg border bg-card p-3 text-sm text-muted-foreground print:hidden">
-        <Info aria-hidden="true" className="mt-0.5 size-4 shrink-0" />
-        Details stay in this browser tab only. Nothing is saved or uploaded, and refreshing the page
-        clears the form. To save a PDF, choose “Save as PDF” in the print window.
+      {draftPanel}
+
+      <p className="text-sm text-muted-foreground print:hidden">
+        To save a PDF, choose “Save as PDF” in the print window.
       </p>
 
       <div

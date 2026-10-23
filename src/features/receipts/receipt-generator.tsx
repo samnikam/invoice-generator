@@ -3,15 +3,18 @@
 import { useEffect, useMemo, useState } from "react";
 
 import { DocumentWorkspace } from "@/components/documents/document-workspace";
+import { DraftPanel } from "@/components/documents/draft-panel";
 import { ErrorSummary } from "@/components/documents/error-summary";
 import { FormSection } from "@/components/documents/form-section";
 import { useDocumentForm } from "@/components/documents/use-document-form";
+import { clearFormMessage, useLocalDraft } from "@/components/documents/use-local-draft";
 import { AmountInput } from "@/components/forms/amount-input";
 import { FormField } from "@/components/forms/form-field";
 import { TextField } from "@/components/forms/text-field";
 import { NativeSelect } from "@/components/ui/native-select";
 import { todayIsoDate } from "@/lib/dates";
 import { fieldDomId } from "@/lib/documents/billing-document";
+import { parseReceiptDraft } from "@/lib/drafts/draft-shapes";
 import { amountInWords } from "@/lib/money/amount-in-words";
 import { formatPaise } from "@/lib/money/format";
 import {
@@ -42,13 +45,21 @@ export function ReceiptGenerator() {
     setValues((v) => (v.paymentDate ? v : { ...v, paymentDate: todayIsoDate() }));
   }, []);
 
+  // Optional draft saved in this browser (opt-in). Restored after the date default above.
+  const draft = useLocalDraft({
+    kind: "receipt",
+    values,
+    parse: parseReceiptDraft,
+    restore: setValues,
+  });
+
   const set = <K extends keyof ReceiptValues>(key: K, value: ReceiptValues[K]) =>
     setValues((v) => ({ ...v, [key]: value }));
   const setContact = (party: Party, field: keyof ContactValues, value: string) =>
     setValues((v) => ({ ...v, [party]: { ...v[party], [field]: value } }));
 
   function clearForm() {
-    if (!window.confirm("Clear all receipt details? This cannot be undone.")) return;
+    if (!window.confirm(clearFormMessage("receipt", draft.enabled))) return;
     setValues({ ...createEmptyReceipt(), paymentDate: todayIsoDate() });
     resetInteraction();
   }
@@ -262,6 +273,7 @@ export function ReceiptGenerator() {
       onViewChange={setView}
       onClear={clearForm}
       onPrint={() => print(`Receipt ${values.receiptNumber.trim()}`)}
+      draftPanel={<DraftPanel draft={draft} documentNoun="receipt" />}
       form={form}
       preview={<ReceiptPreview values={values} evaluation={evaluation} />}
     />

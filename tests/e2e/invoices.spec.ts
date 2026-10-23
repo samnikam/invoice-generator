@@ -106,7 +106,9 @@ test.describe("invoice generator", () => {
     page,
   }) => {
     await expect(page.getByLabel("Invoice date")).not.toHaveValue("");
-    await expect(page.getByText(/Nothing is saved or uploaded/)).toBeVisible();
+    await expect(
+      page.getByText(/details stay in this tab only and are cleared when you refresh/),
+    ).toBeVisible();
     await expect(page.getByTestId("provisional-rate-notice")).toHaveCount(0);
     await page.getByLabel("Tax invoice").check();
     await expect(page.getByTestId("provisional-rate-notice")).toBeVisible();

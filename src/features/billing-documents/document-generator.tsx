@@ -3,9 +3,11 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 
 import { DocumentWorkspace } from "@/components/documents/document-workspace";
+import { DraftPanel } from "@/components/documents/draft-panel";
 import { ErrorSummary } from "@/components/documents/error-summary";
 import { FormSection, sectionHeadingId } from "@/components/documents/form-section";
 import { useDocumentForm } from "@/components/documents/use-document-form";
+import { clearFormMessage, useLocalDraft } from "@/components/documents/use-local-draft";
 import { FormField } from "@/components/forms/form-field";
 import { ProvisionalRateNotice, StateSelect } from "@/components/forms/tax-selects";
 import { TextField } from "@/components/forms/text-field";
@@ -23,6 +25,7 @@ import {
   type LineValues,
   type PartyValues,
 } from "@/lib/documents/billing-document";
+import { nextLineNumber, parseBillingDocumentDraft } from "@/lib/drafts/draft-shapes";
 import { formatPaise } from "@/lib/money/format";
 
 import { DocumentPreview } from "./document-preview";
@@ -60,6 +63,17 @@ export function BillingDocumentGenerator({ kind }: { kind: BillingDocumentKind }
     setValues((v) => (v.issueDate ? v : { ...v, issueDate: todayIsoDate() }));
   }, []);
 
+  // Optional draft saved in this browser (opt-in). Restored after the date default above.
+  const draft = useLocalDraft({
+    kind,
+    values,
+    parse: (raw) => parseBillingDocumentDraft(raw, kind),
+    restore: (saved) => {
+      nextLineId.current = nextLineNumber(saved.lines);
+      setValues(saved);
+    },
+  });
+
   // After "Add item", move keyboard focus to the new item's description.
   useEffect(() => {
     if (!focusLineId.current) return;
@@ -84,7 +98,7 @@ export function BillingDocumentGenerator({ kind }: { kind: BillingDocumentKind }
     );
 
   function clearForm() {
-    if (!window.confirm(`Clear all ${config.noun} details? This cannot be undone.`)) return;
+    if (!window.confirm(clearFormMessage(config.noun, draft.enabled))) return;
     nextLineId.current = 2;
     setValues({ ...createEmptyDocument(kind), issueDate: todayIsoDate() });
     resetInteraction();
@@ -375,6 +389,7 @@ export function BillingDocumentGenerator({ kind }: { kind: BillingDocumentKind }
       onViewChange={setView}
       onClear={clearForm}
       onPrint={() => print(`${config.Noun} ${values.documentNumber.trim()}`)}
+      draftPanel={<DraftPanel draft={draft} documentNoun={config.noun} />}
       form={formContent}
       preview={<DocumentPreview values={values} evaluation={evaluation} />}
     />
