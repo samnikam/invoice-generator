@@ -3,6 +3,7 @@ import Link from "next/link";
 import { ArrowRight } from "lucide-react";
 
 import { calculators } from "@/config/calculators";
+import { PageHeader } from "@/components/layout/page-header";
 
 export const metadata: Metadata = {
   title: "Business calculators",
@@ -12,13 +13,11 @@ export const metadata: Metadata = {
 export default function CalculatorsPage() {
   return (
     <div className="space-y-8">
-      <div>
-        <h1 className="text-2xl font-semibold tracking-tight sm:text-3xl">Business calculators</h1>
-        <p className="mt-2 max-w-2xl text-muted-foreground">
-          Quick, explained answers for everyday pricing and tax questions. Nothing you enter here is
-          saved or sent anywhere.
-        </p>
-      </div>
+      <PageHeader
+        eyebrow="Tools"
+        title="Business calculators"
+        description="Quick, explained answers for everyday pricing and tax questions. Nothing you enter here is saved or sent anywhere."
+      />
       <ul className="grid gap-4 sm:grid-cols-2">
         {calculators.map((calculator) => (
           <li key={calculator.slug}>

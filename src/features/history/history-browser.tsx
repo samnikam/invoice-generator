@@ -14,6 +14,8 @@ import {
 } from "lucide-react";
 import { cn } from "cn";
 
+import { KindBadge } from "@/components/history/kind-badge";
+import { PageHeader } from "@/components/layout/page-header";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -28,7 +30,6 @@ import {
   HISTORY_KIND_LABELS,
   type EvaluatedDocument,
   type HistoryFilter,
-  type HistoryKind,
   type HistoryRecord,
 } from "@/lib/history/history";
 import {
@@ -44,12 +45,6 @@ const FILTERS: { value: HistoryFilter; label: string }[] = [
   { value: "quotation", label: "Quotations" },
   { value: "receipt", label: "Receipts" },
 ];
-
-const KIND_STYLES: Record<HistoryKind, string> = {
-  invoice: "bg-primary/10 text-primary ring-primary/20",
-  quotation: "bg-info/10 text-info ring-info/20",
-  receipt: "bg-success/10 text-success ring-success/25",
-};
 
 const savedFormatter = new Intl.DateTimeFormat("en-IN", {
   dateStyle: "medium",
@@ -73,6 +68,9 @@ export function HistoryBrowser() {
   useEffect(() => {
     // eslint-disable-next-line react-hooks/set-state-in-effect -- client-only read after load
     refresh();
+    // A link such as /history?open=<id> (e.g. from the dashboard) opens that record.
+    const requested = new URLSearchParams(window.location.search).get("open");
+    if (requested) setOpenId(requested);
     // Another tab may save or delete records.
     window.addEventListener("storage", refresh);
     return () => window.removeEventListener("storage", refresh);
@@ -82,8 +80,14 @@ export function HistoryBrowser() {
   const shown = useMemo(() => filterRecords(records, filter, query), [records, filter, query]);
   const open = openId ? records.find((r) => r.id === openId) : undefined;
 
+  /** A record was requested by link but no longer exists (e.g. it was deleted). */
+  const missing = openId !== null && list?.status === "loaded" && !open;
+
   function closeRecord() {
     setOpenId(null);
+    if (new URLSearchParams(window.location.search).has("open")) {
+      window.history.replaceState(null, "", window.location.pathname);
+    }
     requestAnimationFrame(() => searchRef.current?.focus());
   }
 
@@ -123,13 +127,11 @@ export function HistoryBrowser() {
 
   return (
     <div className="space-y-6">
-      <div className="print:hidden">
-        <h1 className="text-2xl font-semibold tracking-tight sm:text-3xl">Document history</h1>
-        <p className="mt-2 max-w-2xl text-muted-foreground">
-          Find invoices, quotations and receipts you saved with “Save to history”, open them, and
-          print or save them as PDF again.
-        </p>
-      </div>
+      <PageHeader
+        eyebrow="Records"
+        title="Document history"
+        description="Find invoices, quotations and receipts you saved with “Save to history”, open them, and print or save them as PDF again."
+      />
 
       <div
         className="flex gap-2.5 rounded-xl border bg-card p-4 text-sm text-muted-foreground shadow-card print:hidden"
@@ -175,6 +177,16 @@ export function HistoryBrowser() {
         <RecordView record={open} onBack={closeRecord} onDelete={() => deleteRecord(open)} />
       ) : (
         <>
+          {missing ? (
+            <p
+              className="flex items-start gap-2 rounded-xl border border-warning/50 bg-warning/10 p-4 text-sm"
+              data-testid="history-open-missing"
+            >
+              <TriangleAlert aria-hidden="true" className="mt-0.5 size-4 shrink-0" />
+              The saved document you tried to open was not found in this browser. It may have been
+              deleted.
+            </p>
+          ) : null}
           {list.damagedIds.length > 0 ? (
             <div
               className="flex flex-col gap-3 rounded-xl border border-warning/50 bg-warning/10 p-4 text-sm sm:flex-row sm:items-center sm:justify-between"
@@ -271,15 +283,28 @@ export function HistoryBrowser() {
                   No saved documents match your search.
                 </p>
               ) : (
-                <ul aria-label="Saved documents" className="divide-y rounded-lg border">
-                  {shown.map((record) => (
-                    <RecordRow
-                      key={record.id}
-                      record={record}
-                      onOpen={() => setOpenId(record.id)}
-                    />
-                  ))}
-                </ul>
+                <div className="overflow-hidden rounded-lg border">
+                  {/* Column titles for wider screens (each row also labels its own values). */}
+                  <div
+                    aria-hidden="true"
+                    className="hidden gap-4 border-b bg-muted/50 px-4 py-2.5 text-xs font-semibold tracking-wide text-muted-foreground uppercase md:grid md:grid-cols-[minmax(0,1.1fr)_minmax(0,1.3fr)_7.5rem_8.5rem_5.5rem]"
+                  >
+                    <span>Document</span>
+                    <span>Customer</span>
+                    <span>Date</span>
+                    <span className="text-right">Amount</span>
+                    <span />
+                  </div>
+                  <ul aria-label="Saved documents" className="divide-y">
+                    {shown.map((record) => (
+                      <RecordRow
+                        key={record.id}
+                        record={record}
+                        onOpen={() => setOpenId(record.id)}
+                      />
+                    ))}
+                  </ul>
+                </div>
               )}
             </div>
           </section>
@@ -289,48 +314,35 @@ export function HistoryBrowser() {
   );
 }
 
-function KindBadge({ kind }: { kind: HistoryKind }) {
-  return (
-    <span
-      className={cn(
-        "inline-flex w-fit items-center rounded-full px-2.5 py-0.5 text-xs font-semibold ring-1",
-        KIND_STYLES[kind],
-      )}
-    >
-      {HISTORY_KIND_LABELS[kind]}
-    </span>
-  );
-}
-
 function RecordRow({ record, onOpen }: { record: HistoryRecord; onOpen: () => void }) {
   const { summary } = record;
   return (
     <li
       data-testid="history-record"
-      className="grid gap-3 p-4 transition-colors hover:bg-accent/30 sm:grid-cols-[minmax(0,1.4fr)_minmax(0,1fr)_auto] sm:items-center"
+      className="grid grid-cols-[minmax(0,1fr)_auto] items-center gap-x-4 gap-y-2 px-4 py-3.5 transition-colors hover:bg-accent/30 md:grid-cols-[minmax(0,1.1fr)_minmax(0,1.3fr)_7.5rem_8.5rem_5.5rem]"
     >
-      <div className="min-w-0 space-y-1">
-        <div className="flex flex-wrap items-center gap-2">
-          <KindBadge kind={record.kind} />
-          <span className="font-semibold break-all" data-testid="history-record-number">
-            {summary.documentNumber}
-          </span>
-        </div>
+      <div className="flex min-w-0 flex-wrap items-center gap-2">
+        <KindBadge kind={record.kind} />
+        <span className="font-semibold break-all" data-testid="history-record-number">
+          {summary.documentNumber}
+        </span>
+      </div>
+      <div className="col-span-2 row-start-2 min-w-0 md:col-span-1 md:row-start-auto">
         <p className="truncate font-medium" data-testid="history-record-customer">
           {summary.customerName}
         </p>
         {summary.customerPhone ? (
-          <p className="text-sm text-muted-foreground">{summary.customerPhone}</p>
+          <p className="truncate text-sm text-muted-foreground">{summary.customerPhone}</p>
         ) : null}
       </div>
-      <dl className="grid grid-cols-2 gap-x-4 gap-y-1 text-sm sm:grid-cols-1">
-        <div>
+      <dl className="contents text-sm">
+        <div className="row-start-3 md:row-start-auto">
           <dt className="sr-only">Date</dt>
-          <dd className="text-muted-foreground" data-testid="history-record-date">
+          <dd className="text-sm text-muted-foreground" data-testid="history-record-date">
             {formatDisplayDate(summary.date)}
           </dd>
         </div>
-        <div className="text-right sm:text-left">
+        <div className="col-start-2 row-start-1 text-right md:col-start-auto md:row-start-auto">
           <dt className="sr-only">{record.kind === "receipt" ? "Amount received" : "Total"}</dt>
           <dd className="font-semibold tabular-nums" data-testid="history-record-total">
             {formatPaise(summary.totalPaise)}
@@ -340,7 +352,8 @@ function RecordRow({ record, onOpen }: { record: HistoryRecord; onOpen: () => vo
       <Button
         type="button"
         variant="outline"
-        className="justify-self-start sm:justify-self-end"
+        size="sm"
+        className="col-start-2 row-start-3 justify-self-end md:col-start-auto md:row-start-auto"
         aria-label={`Open ${HISTORY_KIND_LABELS[record.kind]} ${summary.documentNumber} for ${summary.customerName}`}
         onClick={onOpen}
       >

@@ -12,7 +12,7 @@ export default function AppLayout({ children }: LayoutProps<"/">) {
         <AppHeader />
         <main id="main" className="flex-1">
           {/* Pages that need more room (e.g. the invoice editor) mark themselves with data-wide-page. */}
-          <div className="mx-auto w-full max-w-5xl px-4 py-8 has-[[data-wide-page]]:max-w-screen-2xl sm:px-6 lg:py-10 print:max-w-none print:p-0">
+          <div className="mx-auto w-full max-w-6xl px-4 py-7 has-[[data-wide-page]]:max-w-screen-2xl sm:px-6 lg:px-8 lg:py-9 print:max-w-none print:p-0">
             {children}
           </div>
         </main>

@@ -3,6 +3,7 @@ import Link from "next/link";
 import { ArrowLeft } from "lucide-react";
 
 import { getCalculator, type CalculatorInfo } from "@/config/calculators";
+import { PageHeader } from "@/components/layout/page-header";
 
 import { CalculatorTabs } from "./calculator-tabs";
 
@@ -25,10 +26,12 @@ export function CalculatorLayout({
           <ArrowLeft aria-hidden="true" className="size-4" />
           All calculators
         </Link>
-        <h1 className="mt-3 text-2xl font-semibold tracking-tight sm:text-3xl">
-          {calculator.title}
-        </h1>
-        <p className="mt-2 max-w-2xl text-muted-foreground">{calculator.description}</p>
+        <PageHeader
+          eyebrow="Tools"
+          title={calculator.title}
+          description={calculator.description}
+          className="mt-3"
+        />
       </div>
       <CalculatorTabs />
       {children}

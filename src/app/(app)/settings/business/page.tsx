@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 
 import { BusinessProfileForm } from "@/features/profile/business-profile-form";
+import { PageHeader } from "@/components/layout/page-header";
 
 export const metadata: Metadata = {
   title: "Business profile",
@@ -10,13 +11,11 @@ export const metadata: Metadata = {
 export default function BusinessProfilePage() {
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="text-2xl font-semibold tracking-tight sm:text-3xl">Business profile</h1>
-        <p className="mt-2 max-w-2xl text-muted-foreground">
-          Save your business details once. New invoices, quotations and receipts will be filled in
-          with them automatically.
-        </p>
-      </div>
+      <PageHeader
+        eyebrow="Settings"
+        title="Business profile"
+        description="Save your business details once. New invoices, quotations and receipts will be filled in with them automatically."
+      />
       <BusinessProfileForm />
     </div>
   );

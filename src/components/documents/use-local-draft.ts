@@ -165,6 +165,14 @@ export function useLocalDraft<T>({
  * Confirmation text for "Clear form". When draft saving is on, clearing also replaces
  * the browser draft with the empty form, so the user is told that explicitly.
  */
+/** Confirmation for "New …" when the form already has details in it. */
+export function newDocumentMessage(documentNoun: string, draftEnabled: boolean): string {
+  const base = `Start a new ${documentNoun}? The ${documentNoun} details on screen will be cleared. This cannot be undone.`;
+  return draftEnabled
+    ? `${base} Draft saving is on, so the draft saved in this browser will also be replaced with the new, empty ${documentNoun}.`
+    : base;
+}
+
 export function clearFormMessage(documentNoun: string, draftEnabled: boolean): string {
   const base = `Clear all ${documentNoun} details? This cannot be undone.`;
   return draftEnabled

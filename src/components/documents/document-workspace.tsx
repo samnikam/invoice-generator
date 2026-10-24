@@ -5,6 +5,7 @@ import { Archive, Eraser, Info, Printer } from "lucide-react";
 import { cn } from "cn";
 
 import { Button } from "@/components/ui/button";
+import { PageHeader } from "@/components/layout/page-header";
 
 /**
  * Page frame shared by the document generators: title, Clear / Save to history / Print
@@ -48,26 +49,27 @@ export function DocumentWorkspace({
 }) {
   return (
     <div className="space-y-6" data-wide-page>
-      <div className="flex flex-wrap items-end justify-between gap-4 print:hidden">
-        <div>
-          <h1 className="text-2xl font-semibold tracking-tight sm:text-3xl">{title}</h1>
-          <p className="mt-2 max-w-2xl text-muted-foreground">{description}</p>
-        </div>
-        <div className="flex flex-wrap gap-2">
-          <Button type="button" variant="ghost" size="lg" onClick={onClear}>
-            <Eraser data-icon="inline-start" />
-            Clear form
-          </Button>
-          <Button type="button" variant="outline" size="lg" onClick={onSaveToHistory}>
-            <Archive data-icon="inline-start" />
-            Save to history
-          </Button>
-          <Button type="button" size="lg" onClick={onPrint}>
-            <Printer data-icon="inline-start" />
-            Print / Save as PDF
-          </Button>
-        </div>
-      </div>
+      <PageHeader
+        eyebrow="Sales"
+        title={title}
+        description={description}
+        actions={
+          <>
+            <Button type="button" variant="ghost" size="lg" onClick={onClear}>
+              <Eraser data-icon="inline-start" />
+              Clear form
+            </Button>
+            <Button type="button" variant="outline" size="lg" onClick={onSaveToHistory}>
+              <Archive data-icon="inline-start" />
+              Save to history
+            </Button>
+            <Button type="button" size="lg" onClick={onPrint}>
+              <Printer data-icon="inline-start" />
+              Print / Save as PDF
+            </Button>
+          </>
+        }
+      />
 
       {historyStatus}
 

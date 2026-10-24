@@ -8,7 +8,12 @@ import { ErrorSummary } from "@/components/documents/error-summary";
 import { useSaveToHistory } from "@/components/history/save-to-history";
 import { FormSection } from "@/components/documents/form-section";
 import { useDocumentForm } from "@/components/documents/use-document-form";
-import { clearFormMessage, useLocalDraft } from "@/components/documents/use-local-draft";
+import { useNewDocumentRequest } from "@/components/documents/new-document-request";
+import {
+  clearFormMessage,
+  newDocumentMessage,
+  useLocalDraft,
+} from "@/components/documents/use-local-draft";
 import { AmountInput } from "@/components/forms/amount-input";
 import { FormField } from "@/components/forms/form-field";
 import { TextField } from "@/components/forms/text-field";
@@ -106,6 +111,28 @@ export function ReceiptGenerator() {
     setFilledFromProfile(false);
     resetInteraction();
   }
+
+  /** The values a brand-new receipt starts with (as on a fresh page): today's date and the
+   *  saved business contact details (never GSTIN or state). */
+  function freshStart(): { values: ReceiptValues; fromProfile: boolean } {
+    const empty = { ...createEmptyReceipt(), paymentDate: todayIsoDate() };
+    const profile = readProfile(getBrowserStorage());
+    return profile.status === "loaded"
+      ? { values: { ...empty, business: toReceiptBusiness(profile.profile) }, fromProfile: true }
+      : { values: empty, fromProfile: false };
+  }
+
+  // "New receipt" / "Record receipt": start a fresh form. The page may have been kept alive
+  // with earlier details, so ask before clearing anything that was entered.
+  useNewDocumentRequest("receipt", () => {
+    const fresh = freshStart();
+    const untouched = JSON.stringify(values) === JSON.stringify(fresh.values);
+    if (!untouched && !window.confirm(newDocumentMessage("receipt", draft.enabled))) return;
+    setValues(fresh.values);
+    setFilledFromProfile(fresh.fromProfile);
+    resetInteraction();
+    setView("edit");
+  });
 
   const text = (
     field: string,

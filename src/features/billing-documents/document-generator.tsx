@@ -8,7 +8,12 @@ import { ErrorSummary } from "@/components/documents/error-summary";
 import { useSaveToHistory } from "@/components/history/save-to-history";
 import { FormSection, sectionHeadingId } from "@/components/documents/form-section";
 import { useDocumentForm } from "@/components/documents/use-document-form";
-import { clearFormMessage, useLocalDraft } from "@/components/documents/use-local-draft";
+import { useNewDocumentRequest } from "@/components/documents/new-document-request";
+import {
+  clearFormMessage,
+  newDocumentMessage,
+  useLocalDraft,
+} from "@/components/documents/use-local-draft";
 import { FormField } from "@/components/forms/form-field";
 import { ProvisionalRateNotice, StateSelect } from "@/components/forms/tax-selects";
 import { AmountInput } from "@/components/forms/amount-input";
@@ -161,6 +166,37 @@ export function BillingDocumentGenerator({ kind }: { kind: BillingDocumentKind }
     setFilledFromProfile(false);
     resetInteraction();
   }
+
+  /** The values a brand-new document starts with (as on a fresh page): today's date and
+   *  the saved business details. */
+  function freshStart(): { values: BillingDocumentValues; fromProfile: boolean } {
+    const empty = { ...createEmptyDocument(kind), issueDate: todayIsoDate() };
+    const storage = getBrowserStorage();
+    const profile = readProfile(storage);
+    if (profile.status !== "loaded") return { values: empty, fromProfile: false };
+    const logo = kind === "invoice" ? readLogo(storage) : null;
+    return {
+      values: {
+        ...empty,
+        seller: toSellerFields(profile.profile),
+        sellerLogo: logo?.status === "loaded" ? logo.dataUrl : "",
+      },
+      fromProfile: true,
+    };
+  }
+
+  // "New invoice" / "Create invoice": start a fresh form. The page may have been kept alive
+  // with earlier details, so ask before clearing anything that was entered.
+  useNewDocumentRequest(kind, () => {
+    const fresh = freshStart();
+    const untouched = JSON.stringify(values) === JSON.stringify(fresh.values);
+    if (!untouched && !window.confirm(newDocumentMessage(config.noun, draft.enabled))) return;
+    nextLineId.current = 2;
+    setValues(fresh.values);
+    setFilledFromProfile(fresh.fromProfile);
+    resetInteraction();
+    setView("edit");
+  });
 
   /** Text field bound to a form key, with touch-on-blur and its error. */
   const text = (

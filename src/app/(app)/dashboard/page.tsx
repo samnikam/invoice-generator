@@ -1,12 +1,15 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { ArrowRight, HardDrive, Info } from "lucide-react";
+import { ArrowRight, FilePlus2, HardDrive, Info, ReceiptIndianRupee } from "lucide-react";
 
+import { NewDocumentLink } from "@/components/documents/new-document-link";
 import { FeatureStatusBadge } from "@/components/feature-status-badge";
+import { PageHeader } from "@/components/layout/page-header";
 import { ProfilePrompt } from "@/components/profile/profile-prompt";
 import { Button } from "@/components/ui/button";
 import { features } from "@/config/features";
 import { siteConfig } from "@/config/site";
+import { BusinessGreeting, DashboardOverview } from "@/features/dashboard/dashboard-overview";
 
 export const metadata: Metadata = {
   title: "Dashboard",
@@ -16,19 +19,28 @@ export default function DashboardPage() {
   const inDevelopmentCount = features.filter((f) => f.status === "in-development").length;
 
   return (
-    <div className="space-y-10">
-      <div className="relative overflow-hidden rounded-2xl bg-linear-to-br from-primary to-primary-deep p-6 text-primary-foreground shadow-card-hover sm:p-8">
-        <div
-          aria-hidden="true"
-          className="pointer-events-none absolute -top-16 -right-16 size-56 rounded-full bg-white/10 blur-2xl"
-        />
-        <h1 className="relative text-2xl font-semibold tracking-tight sm:text-3xl">
-          Welcome to {siteConfig.name}
-        </h1>
-        <p className="relative mt-2 max-w-2xl text-primary-foreground/85">
-          Your workspace for invoices, quotations, receipts and business calculators.
-        </p>
-      </div>
+    <div className="space-y-8">
+      <PageHeader
+        eyebrow="Overview"
+        title={`Welcome to ${siteConfig.name}`}
+        description={<BusinessGreeting />}
+        actions={
+          <>
+            <Button asChild size="lg" variant="outline">
+              <NewDocumentLink href="/receipts/new" kind="receipt">
+                <ReceiptIndianRupee data-icon="inline-start" />
+                Record receipt
+              </NewDocumentLink>
+            </Button>
+            <Button asChild size="lg">
+              <NewDocumentLink href="/invoices/new" kind="invoice">
+                <FilePlus2 data-icon="inline-start" />
+                Create invoice
+              </NewDocumentLink>
+            </Button>
+          </>
+        }
+      />
 
       {inDevelopmentCount > 0 ? (
         <div
@@ -52,28 +64,35 @@ export default function DashboardPage() {
 
       <ProfilePrompt />
 
-      <section aria-labelledby="tools-heading">
-        <h2 id="tools-heading" className="text-lg font-semibold tracking-tight">
-          Your tools
-        </h2>
-        <ul className="mt-4 grid gap-4 sm:grid-cols-2">
+      <DashboardOverview />
+
+      <section aria-labelledby="tools-heading" className="space-y-4">
+        <div>
+          <h2 id="tools-heading" className="text-lg font-semibold tracking-tight">
+            Your tools
+          </h2>
+          <p className="text-sm text-muted-foreground">
+            Everything below works today, with nothing to install.
+          </p>
+        </div>
+        <ul className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
           {features.map((feature) => (
             <li
               key={feature.id}
-              className="flex flex-col rounded-xl border bg-card p-5 shadow-card transition-[box-shadow,border-color,translate] duration-200 hover:-translate-y-0.5 hover:border-primary/30 hover:shadow-card-hover motion-reduce:transition-none motion-reduce:hover:translate-y-0"
+              className="group flex flex-col rounded-xl border bg-card p-5 shadow-card transition-[box-shadow,border-color] duration-200 hover:border-primary/30 hover:shadow-card-hover motion-reduce:transition-none"
             >
               <div className="flex items-start justify-between gap-3">
-                <span className="flex size-11 items-center justify-center rounded-xl bg-linear-to-br from-primary to-primary/75 text-primary-foreground shadow-sm shadow-primary/30">
+                <span className="flex size-10 items-center justify-center rounded-lg bg-primary/10 text-primary ring-1 ring-primary/15">
                   <feature.icon aria-hidden="true" className="size-5" />
                 </span>
                 <FeatureStatusBadge status={feature.status} />
               </div>
               <h3 className="mt-4 font-semibold">{feature.title}</h3>
-              <p className="mt-1 text-sm leading-relaxed text-muted-foreground">
+              <p className="mt-1 flex-1 text-sm leading-relaxed text-muted-foreground">
                 {feature.description}
               </p>
               {feature.status === "available" && feature.href ? (
-                <Button asChild className="mt-5 self-start">
+                <Button asChild variant="outline" className="mt-4 self-start">
                   <Link href={feature.href}>
                     Open
                     <ArrowRight data-icon="inline-end" />
@@ -96,8 +115,8 @@ export default function DashboardPage() {
           </h2>
           <p className="mt-1 leading-relaxed text-muted-foreground">
             No account is needed and nothing is ever uploaded. Details are kept only if you choose
-            to save a draft or your business profile — and then only in this browser on this device,
-            not encrypted. Print or save a PDF to keep a copy of a document.
+            to save a draft, your business profile or a document to history — and then only in this
+            browser on this device, not encrypted. Print or save a PDF to keep a copy of a document.
           </p>
         </div>
       </section>
