@@ -1,7 +1,7 @@
 "use client";
 
 import type { ReactNode } from "react";
-import { Eraser, Printer } from "lucide-react";
+import { Eraser, Info, Printer } from "lucide-react";
 import { cn } from "cn";
 
 import { Button } from "@/components/ui/button";
@@ -60,14 +60,15 @@ export function DocumentWorkspace({
 
       {draftPanel}
 
-      <p className="text-sm text-muted-foreground print:hidden">
+      <p className="flex items-center gap-2 text-sm text-muted-foreground print:hidden">
+        <Info aria-hidden="true" className="size-4 shrink-0 text-primary/70" />
         To save a PDF, choose “Save as PDF” in the print window.
       </p>
 
       <div
         role="group"
         aria-label="Show"
-        className="inline-flex rounded-lg bg-muted p-1 2xl:hidden print:hidden"
+        className="inline-flex rounded-lg border bg-card p-1 shadow-card 2xl:hidden print:hidden"
       >
         {(["edit", "preview"] as const).map((option) => (
           <button
@@ -78,8 +79,8 @@ export function DocumentWorkspace({
             className={cn(
               "rounded-md px-4 py-1.5 text-sm font-medium transition-colors",
               view === option
-                ? "bg-background text-foreground shadow-xs"
-                : "text-muted-foreground hover:text-foreground",
+                ? "bg-primary text-primary-foreground shadow-xs"
+                : "text-muted-foreground hover:bg-accent/70 hover:text-accent-foreground",
             )}
           >
             {option === "edit" ? "Edit details" : `Preview ${documentNoun}`}

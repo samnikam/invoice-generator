@@ -20,7 +20,7 @@ export function CalculatorLayout({
       <div>
         <Link
           href="/calculators"
-          className="inline-flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground"
+          className="inline-flex items-center gap-1.5 text-sm font-medium text-muted-foreground transition-colors hover:text-primary"
         >
           <ArrowLeft aria-hidden="true" className="size-4" />
           All calculators
@@ -40,7 +40,7 @@ export function CalculatorLayout({
 export function CalculatorGrid({ form, result }: { form: ReactNode; result: ReactNode }) {
   return (
     <div className="grid items-start gap-6 lg:grid-cols-[minmax(0,1.1fr)_minmax(0,1fr)]">
-      <div className="rounded-xl border bg-card p-5 shadow-xs sm:p-6">{form}</div>
+      <div className="rounded-xl border bg-card p-5 shadow-card sm:p-6">{form}</div>
       {result}
     </div>
   );

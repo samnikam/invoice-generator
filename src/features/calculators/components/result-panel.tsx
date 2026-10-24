@@ -21,12 +21,16 @@ export function ResultPanel({
   return (
     <section
       aria-labelledby="result-heading"
-      className="rounded-xl border bg-card p-5 shadow-xs sm:p-6 lg:sticky lg:top-24"
+      className="rounded-xl border bg-card shadow-card lg:sticky lg:top-24"
     >
-      <h2 id="result-heading" className="text-base font-semibold">
+      <h2
+        id="result-heading"
+        className="flex items-center gap-2.5 border-b px-5 py-3.5 text-[0.95rem] font-semibold tracking-tight sm:px-6"
+      >
+        <span aria-hidden="true" className="h-4 w-1 rounded-full bg-primary" />
         {title}
       </h2>
-      <div aria-live="polite" className="mt-4">
+      <div aria-live="polite" className="p-5 sm:p-6">
         {formError ? (
           <p role="alert" className="text-sm text-destructive">
             {formError}
@@ -60,7 +64,7 @@ export function ResultRow({
     <div
       className={cn(
         "flex items-baseline justify-between gap-4 py-2.5",
-        emphasis && "mt-1 border-t-2 border-foreground/10 pt-3",
+        emphasis && "mt-1 border-t-2 border-primary/15 pt-3",
       )}
     >
       <dt className={cn("text-sm", emphasis ? "font-semibold" : "text-muted-foreground")}>
@@ -70,7 +74,7 @@ export function ResultRow({
         data-testid={testId}
         className={cn(
           "text-right tabular-nums",
-          emphasis ? "text-lg font-semibold" : "text-sm font-medium",
+          emphasis ? "text-lg font-semibold text-primary" : "text-sm font-medium",
         )}
       >
         {value}

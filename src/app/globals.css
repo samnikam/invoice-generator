@@ -38,6 +38,8 @@
   --color-success-foreground: var(--success-foreground);
   --color-warning: var(--warning);
   --color-warning-foreground: var(--warning-foreground);
+  --color-info: var(--info);
+  --color-primary-deep: var(--primary-deep);
   --color-accent-foreground: var(--accent-foreground);
   --color-accent: var(--accent);
   --color-muted-foreground: var(--muted-foreground);
@@ -59,31 +61,49 @@
   --radius-4xl: calc(var(--radius) * 2.6);
 }
 
-/* Light theme (default). Primary is a restrained deep indigo; neutrals are cool greys. */
+/*
+ * Elevation for app surfaces (cards, panels, tabs). Soft, cool-tinted shadows so white
+ * cards stand out from the grey canvas without heavy borders. Document previews
+ * (invoice, quotation, receipt) keep their own styling and do not use these.
+ */
+@theme {
+  --shadow-card: 0 1px 2px 0 oklch(0.21 0.03 262 / 0.05), 0 1px 3px 0 oklch(0.21 0.03 262 / 0.05);
+  --shadow-card-hover:
+    0 2px 4px -1px oklch(0.21 0.03 262 / 0.06), 0 12px 24px -8px oklch(0.46 0.16 264 / 0.18);
+}
+
+/*
+ * Light theme (default). Primary is a confident indigo; neutrals are cool greys.
+ * --radius, --border, --muted and --muted-foreground are also used by the printed
+ * documents, so changing them changes invoices, quotations and receipts too.
+ */
 :root {
-  --background: oklch(0.985 0.003 255);
+  --background: oklch(0.975 0.006 262);
   --foreground: oklch(0.21 0.03 262);
   --card: oklch(1 0 0);
   --card-foreground: oklch(0.21 0.03 262);
   --popover: oklch(1 0 0);
   --popover-foreground: oklch(0.21 0.03 262);
-  --primary: oklch(0.46 0.16 264);
+  --primary: oklch(0.47 0.19 268);
   --primary-foreground: oklch(0.99 0 0);
+  /* Deeper violet-indigo, used with --primary for gradients (banners, hero accents). */
+  --primary-deep: oklch(0.4 0.17 285);
   --secondary: oklch(0.955 0.012 260);
   --secondary-foreground: oklch(0.28 0.05 264);
   --muted: oklch(0.96 0.006 260);
   --muted-foreground: oklch(0.49 0.025 262);
-  --accent: oklch(0.95 0.025 264);
-  --accent-foreground: oklch(0.36 0.13 264);
+  --accent: oklch(0.95 0.03 268);
+  --accent-foreground: oklch(0.4 0.17 268);
   --destructive: oklch(0.55 0.21 27);
   --success: oklch(0.52 0.12 160);
   --success-foreground: oklch(0.99 0 0);
   --warning: oklch(0.78 0.15 75);
   --warning-foreground: oklch(0.33 0.08 55);
+  --info: oklch(0.52 0.13 235);
   --border: oklch(0.915 0.008 260);
   --input: oklch(0.88 0.01 260);
-  --ring: oklch(0.55 0.16 264);
-  --chart-1: oklch(0.46 0.16 264);
+  --ring: oklch(0.56 0.18 268);
+  --chart-1: oklch(0.47 0.19 268);
   --chart-2: oklch(0.6 0.12 200);
   --chart-3: oklch(0.65 0.13 160);
   --chart-4: oklch(0.75 0.14 80);
@@ -91,12 +111,12 @@
   --radius: 0.625rem;
   --sidebar: oklch(1 0 0);
   --sidebar-foreground: oklch(0.21 0.03 262);
-  --sidebar-primary: oklch(0.46 0.16 264);
+  --sidebar-primary: oklch(0.47 0.19 268);
   --sidebar-primary-foreground: oklch(0.99 0 0);
-  --sidebar-accent: oklch(0.95 0.025 264);
-  --sidebar-accent-foreground: oklch(0.36 0.13 264);
+  --sidebar-accent: oklch(0.95 0.03 268);
+  --sidebar-accent-foreground: oklch(0.4 0.17 268);
   --sidebar-border: oklch(0.915 0.008 260);
-  --sidebar-ring: oklch(0.55 0.16 264);
+  --sidebar-ring: oklch(0.56 0.18 268);
 }
 
 /* Dark theme tokens are kept for a future theme switch; no toggle exists yet. */
@@ -109,6 +129,7 @@
   --popover-foreground: oklch(0.97 0.005 260);
   --primary: oklch(0.7 0.13 264);
   --primary-foreground: oklch(0.17 0.02 262);
+  --primary-deep: oklch(0.6 0.15 285);
   --secondary: oklch(0.27 0.03 262);
   --secondary-foreground: oklch(0.97 0.005 260);
   --muted: oklch(0.27 0.03 262);
@@ -120,6 +141,7 @@
   --success-foreground: oklch(0.17 0.02 262);
   --warning: oklch(0.8 0.14 80);
   --warning-foreground: oklch(0.92 0.06 85);
+  --info: oklch(0.72 0.12 235);
   --border: oklch(1 0 0 / 10%);
   --input: oklch(1 0 0 / 15%);
   --ring: oklch(0.7 0.13 264);

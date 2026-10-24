@@ -5,7 +5,7 @@ import { Logo } from "@/components/brand/logo";
 /** Fixed sidebar for large screens. On smaller screens the AppHeader menu is used instead. */
 export function AppSidebar() {
   return (
-    <aside className="fixed inset-y-0 left-0 z-30 hidden w-64 flex-col border-r bg-sidebar lg:flex print:hidden">
+    <aside className="fixed inset-y-0 left-0 z-30 hidden w-64 flex-col border-r bg-sidebar shadow-[1px_0_0_0_var(--sidebar-border)] lg:flex print:hidden">
       <div className="flex h-16 items-center border-b px-5">
         <Logo />
       </div>

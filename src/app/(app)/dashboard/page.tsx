@@ -17,11 +17,15 @@ export default function DashboardPage() {
 
   return (
     <div className="space-y-10">
-      <div>
-        <h1 className="text-2xl font-semibold tracking-tight sm:text-3xl">
+      <div className="relative overflow-hidden rounded-2xl bg-linear-to-br from-primary to-primary-deep p-6 text-primary-foreground shadow-card-hover sm:p-8">
+        <div
+          aria-hidden="true"
+          className="pointer-events-none absolute -top-16 -right-16 size-56 rounded-full bg-white/10 blur-2xl"
+        />
+        <h1 className="relative text-2xl font-semibold tracking-tight sm:text-3xl">
           Welcome to {siteConfig.name}
         </h1>
-        <p className="mt-2 max-w-2xl text-muted-foreground">
+        <p className="relative mt-2 max-w-2xl text-primary-foreground/85">
           Your workspace for invoices, quotations, receipts and business calculators.
         </p>
       </div>
@@ -49,14 +53,17 @@ export default function DashboardPage() {
       <ProfilePrompt />
 
       <section aria-labelledby="tools-heading">
-        <h2 id="tools-heading" className="text-lg font-semibold">
+        <h2 id="tools-heading" className="text-lg font-semibold tracking-tight">
           Your tools
         </h2>
         <ul className="mt-4 grid gap-4 sm:grid-cols-2">
           {features.map((feature) => (
-            <li key={feature.id} className="flex flex-col rounded-xl border bg-card p-5 shadow-xs">
+            <li
+              key={feature.id}
+              className="flex flex-col rounded-xl border bg-card p-5 shadow-card transition-[box-shadow,border-color,translate] duration-200 hover:-translate-y-0.5 hover:border-primary/30 hover:shadow-card-hover motion-reduce:transition-none motion-reduce:hover:translate-y-0"
+            >
               <div className="flex items-start justify-between gap-3">
-                <span className="flex size-10 items-center justify-center rounded-lg bg-accent text-accent-foreground">
+                <span className="flex size-11 items-center justify-center rounded-xl bg-linear-to-br from-primary to-primary/75 text-primary-foreground shadow-sm shadow-primary/30">
                   <feature.icon aria-hidden="true" className="size-5" />
                 </span>
                 <FeatureStatusBadge status={feature.status} />
@@ -80,7 +87,7 @@ export default function DashboardPage() {
 
       <section
         aria-labelledby="data-heading"
-        className="flex gap-3 rounded-xl border bg-card p-5 text-sm"
+        className="flex gap-3 rounded-xl border bg-card p-5 text-sm shadow-card"
       >
         <HardDrive aria-hidden="true" className="mt-0.5 size-5 shrink-0 text-muted-foreground" />
         <div>

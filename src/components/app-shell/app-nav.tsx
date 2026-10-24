@@ -15,18 +15,18 @@ export function AppNav({ onNavigate }: { onNavigate?: () => void }) {
   const pathname = usePathname();
 
   return (
-    <nav aria-label="Workspace" className="flex flex-col gap-6">
+    <nav aria-label="Workspace" className="flex flex-col gap-5">
       {appNav.map((group, index) => (
         <div key={group.label ?? index}>
           {group.label ? (
-            <p className="mb-2 px-3 text-xs font-medium tracking-wide text-muted-foreground uppercase">
+            <p className="mb-1.5 px-3 text-[0.7rem] font-semibold tracking-wider text-muted-foreground/80 uppercase">
               {group.label}
             </p>
           ) : null}
           <ul className="flex flex-col gap-0.5">
             {group.items.map((item) => {
               const itemClass =
-                "flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-colors";
+                "relative flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-colors";
 
               if (!item.href) {
                 return (
@@ -54,12 +54,21 @@ export function AppNav({ onNavigate }: { onNavigate?: () => void }) {
                     aria-current={active ? "page" : undefined}
                     className={cn(
                       itemClass,
+                      "group/nav",
                       active
-                        ? "bg-sidebar-accent text-sidebar-accent-foreground"
-                        : "text-foreground/80 hover:bg-muted hover:text-foreground",
+                        ? "bg-sidebar-accent font-semibold text-sidebar-accent-foreground before:absolute before:inset-y-2 before:-left-3 before:w-1 before:rounded-r-full before:bg-sidebar-primary"
+                        : "text-foreground/75 hover:bg-muted hover:text-foreground",
                     )}
                   >
-                    <item.icon aria-hidden="true" className="size-4" />
+                    <item.icon
+                      aria-hidden="true"
+                      className={cn(
+                        "size-4 transition-colors",
+                        active
+                          ? "text-sidebar-primary"
+                          : "text-muted-foreground group-hover/nav:text-foreground",
+                      )}
+                    />
                     {item.title}
                   </Link>
                 </li>

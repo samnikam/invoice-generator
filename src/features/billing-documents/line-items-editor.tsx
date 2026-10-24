@@ -50,7 +50,7 @@ export function LineItemsEditor({
               <div
                 role="group"
                 aria-labelledby={`${id("description")}-heading`}
-                className="space-y-4 rounded-lg border bg-background p-4"
+                className="space-y-4 rounded-lg border bg-muted/40 p-4"
                 data-testid="line-item"
               >
                 <div className="flex items-center justify-between gap-3">

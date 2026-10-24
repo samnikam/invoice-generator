@@ -24,9 +24,9 @@ export default function CalculatorsPage() {
           <li key={calculator.slug}>
             <Link
               href={calculator.href}
-              className="group flex h-full flex-col rounded-xl border bg-card p-5 shadow-xs transition-shadow hover:border-primary/40 hover:shadow-md"
+              className="group flex h-full flex-col rounded-xl border bg-card p-5 shadow-card transition-[box-shadow,border-color,translate] duration-200 hover:-translate-y-0.5 hover:border-primary/30 hover:shadow-card-hover motion-reduce:transition-none motion-reduce:hover:translate-y-0"
             >
-              <span className="flex size-10 items-center justify-center rounded-lg bg-accent text-accent-foreground">
+              <span className="flex size-11 items-center justify-center rounded-xl bg-linear-to-br from-primary to-primary/75 text-primary-foreground shadow-sm shadow-primary/30">
                 <calculator.icon aria-hidden="true" className="size-5" />
               </span>
               <span className="mt-4 font-semibold">{calculator.title}</span>

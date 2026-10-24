@@ -43,7 +43,7 @@ export function DraftPanel({ draft, documentNoun }: { draft: LocalDraft; documen
   return (
     <section
       aria-label="Draft saving"
-      className="space-y-3 rounded-lg border bg-card p-4 text-sm print:hidden"
+      className="space-y-3 rounded-xl border bg-card p-4 text-sm shadow-card print:hidden"
     >
       <div className="flex items-start gap-3">
         <input

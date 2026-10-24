@@ -32,7 +32,7 @@ export function AppHeader() {
   const title = usePageTitle();
 
   return (
-    <header className="sticky top-0 z-20 flex h-16 items-center gap-3 border-b bg-background/85 px-4 backdrop-blur supports-backdrop-filter:bg-background/70 sm:px-6 print:hidden">
+    <header className="sticky top-0 z-20 flex h-16 items-center gap-3 border-b bg-card/90 px-4 shadow-[0_1px_2px_0_oklch(0.21_0.03_262/0.03)] backdrop-blur supports-backdrop-filter:bg-card/75 sm:px-6 print:hidden">
       <Sheet open={menuOpen} onOpenChange={setMenuOpen}>
         <SheetTrigger asChild>
           <Button
@@ -63,7 +63,7 @@ export function AppHeader() {
       </Sheet>
 
       <Logo className="lg:hidden" />
-      <p className="hidden text-sm font-medium text-muted-foreground lg:block">{title}</p>
+      <p className="hidden text-sm font-semibold text-foreground lg:block">{title}</p>
 
       <div className="ml-auto">
         <Button asChild variant="ghost" size="lg">
