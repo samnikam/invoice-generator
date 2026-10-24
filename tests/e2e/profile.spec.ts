@@ -170,7 +170,7 @@ test.describe("documents filled from the profile", () => {
     await expect(page.getByLabel("Business address")).toHaveValue("12 MG Road\nPune");
     await page.getByLabel("Tax invoice").check();
     await expect(page.getByLabel("State of registration")).toHaveValue("27");
-    await expect(page.getByLabel("GSTIN", { exact: true })).toHaveValue("27AAPFU0939F1ZV");
+    await expect(page.getByLabel(/^GSTIN/)).toHaveValue("27AAPFU0939F1ZV");
     // Nothing is stored for the invoice itself (draft saving is still off).
     expect(await storedJson(page, INVOICE_DRAFT)).toBeNull();
 

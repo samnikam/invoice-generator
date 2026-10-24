@@ -90,13 +90,13 @@ describe("evaluateDocument — required fields", () => {
     expect(result.totals).toBeNull();
   });
 
-  it("requires seller GSTIN, state and place of supply on a tax invoice", () => {
+  it("requires seller state and place of supply on a tax invoice", () => {
     const values = taxInvoice({
       seller: { ...taxInvoice().seller, gstin: "", stateCode: "" },
       placeOfSupply: "",
     });
     const result = evaluateDocument(values);
-    expect(result.errors["seller.gstin"]).toBe("GSTIN is required on a tax invoice.");
+    expect(result.errors["seller.gstin"]).toBeUndefined();
     expect(result.errors["seller.stateCode"]).toBe("Select the seller's state.");
     expect(result.errors["placeOfSupply"]).toBe("Select the place of supply.");
     expect(result.totals).toBeNull();
@@ -131,6 +131,29 @@ describe("evaluateDocument — format checks", () => {
 
   it("accepts a 16-character invoice number with - and /", () => {
     expect(fields(taxInvoice({ documentNumber: "INV-2026-27/0001" }))).toEqual([]);
+  });
+
+  it("accepts an empty seller GSTIN and still calculates the same GST", () => {
+    const withGstin = evaluateDocument(taxInvoice());
+    for (const gstin of ["", "   "]) {
+      const result = evaluateDocument(taxInvoice({ seller: { ...taxInvoice().seller, gstin } }));
+      expect(result.issues).toEqual([]);
+      expect(result.totals).not.toBeNull();
+      // An empty GSTIN never means "no GST": the tax is exactly the same.
+      expect(result.totals).toEqual(withGstin.totals);
+      expect(result.totals?.totalTaxPaise).toBeGreaterThan(0);
+    }
+  });
+
+  it("still format-checks a seller GSTIN when one is entered", () => {
+    for (const [gstin, message] of [
+      ["12345", /15 characters/],
+      ["27AAPFU0939F1Z!", /format is not valid/],
+      ["27AAPFU0939F1ZA", /check character/],
+    ] as const) {
+      const result = evaluateDocument(taxInvoice({ seller: { ...taxInvoice().seller, gstin } }));
+      expect(result.errors["seller.gstin"]).toMatch(message);
+    }
   });
 
   it("rejects a GSTIN from another state and a mistyped GSTIN", () => {

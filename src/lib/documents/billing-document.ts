@@ -30,9 +30,9 @@ import type { PlaceOfSupply } from "@/lib/tax/supply-type";
  *
  * GST modes:
  * - "with-gst":    GST is calculated. Seller state and place of supply are required and
- *                  each item needs a GST treatment. On an INVOICE this is a tax invoice from
- *                  a GST-registered seller, so the seller GSTIN is required; on a QUOTATION
- *                  the GSTIN is optional (checked if entered).
+ *                  each item needs a GST treatment. The seller GSTIN is optional on both
+ *                  invoices and quotations (format-checked if entered), so the app can be tried
+ *                  without a real GSTIN. Leaving it empty does not change the GST calculated.
  * - "without-gst": no GST. An invoice without GST is for sellers not registered for GST,
  *                  so a seller GSTIN is refused; a quotation without GST simply adds no GST.
  * A "bill of supply" (composition / exempt-only sellers) is not supported yet.
@@ -89,7 +89,7 @@ export const DOCUMENT_KINDS: Record<BillingDocumentKind, KindConfig> = {
         hint: "I am not registered for GST, so I cannot charge GST.",
       },
     ],
-    gstinWithGst: "required",
+    gstinWithGst: "optional",
     gstinWithoutGst: "refuse",
   },
   quotation: {

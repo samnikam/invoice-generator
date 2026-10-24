@@ -45,7 +45,7 @@ async function fillHeader(
   await page.getByLabel("Business name").fill("Sample Design Studio");
   await page.getByLabel("Business address").fill("12 MG Road\nPune");
   await page.getByLabel("State of registration").selectOption(sellerState);
-  await page.getByLabel("GSTIN", { exact: true }).fill(gstin);
+  await page.getByLabel(/^GSTIN/).fill(gstin);
   await page.getByLabel("Customer name").fill("Example Retail Pvt Ltd");
   await page.getByLabel("Invoice number").fill("INV-2026/001");
   await page.getByLabel("Place of supply").selectOption(placeOfSupply);
@@ -149,7 +149,7 @@ test.describe("invoice generator", () => {
   test("validates GSTIN format and state", async ({ page }) => {
     await page.getByLabel("Tax invoice").check();
     await page.getByLabel("State of registration").selectOption("29");
-    const gstin = page.getByLabel("GSTIN", { exact: true });
+    const gstin = page.getByLabel(/^GSTIN/);
     await gstin.fill("27AAPFU0939F1ZV");
     await gstin.blur();
     await expect(page.getByText(/belongs to state code 27/)).toBeVisible();
@@ -238,7 +238,7 @@ test.describe("invoice generator", () => {
 
   test("invoice without GST: no GST fields, no tax, clear note", async ({ page }) => {
     await page.getByLabel("Invoice without GST").check();
-    await expect(page.getByLabel("GSTIN", { exact: true })).toHaveCount(0);
+    await expect(page.getByLabel(/^GSTIN/)).toHaveCount(0);
     await expect(page.getByLabel("State of registration")).toHaveCount(0);
     await expect(page.getByLabel("GST treatment")).toHaveCount(0);
     await expect(page.getByTestId("provisional-rate-notice")).toHaveCount(0);

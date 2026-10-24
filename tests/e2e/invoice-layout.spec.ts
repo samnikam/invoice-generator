@@ -377,3 +377,85 @@ test.describe("printing and compatibility", () => {
     await expect(doc.getByRole("heading", { level: 2 })).toHaveText("Quotation");
   });
 });
+
+test.describe("optional GSTIN", () => {
+  /** Profile with a state but no GSTIN — nothing invented or filled in for the user. */
+  async function saveProfileWithoutGstin(page: Page) {
+    await open(page, "/settings/business");
+    await page.getByLabel("Business name").fill("Sample Design Studio");
+    await page.getByLabel("Business address").fill("12 MG Road\nPune");
+    await page.getByLabel("State of registration").selectOption("27");
+    await page.getByRole("button", { name: "Save profile" }).click();
+    await expect(page.getByTestId("profile-status")).toContainText("Saved in this browser");
+  }
+
+  test("the profile saves and updates with an empty GSTIN", async ({ page }) => {
+    await saveProfile(page, { withLogo: false });
+    await page.getByLabel("GSTIN").fill("");
+    await page.getByRole("button", { name: "Save profile" }).click();
+    await expect(page.getByTestId("profile-status")).toContainText("Saved in this browser");
+    await page.reload();
+    await page.waitForLoadState("networkidle");
+    await expect(page.getByLabel("GSTIN")).toHaveValue("");
+    await expect(page.getByLabel("Business name")).toHaveValue("Sample Design Studio");
+    const stored = await page.evaluate(() =>
+      JSON.parse(localStorage.getItem("smartbill.profile.v1") ?? "null"),
+    );
+    expect(stored.profile.gstin).toBe("");
+  });
+
+  test("a tax invoice without a GSTIN is valid, keeps its GST, and omits the GSTIN", async ({
+    page,
+  }) => {
+    await page.addInitScript(() => {
+      (window as unknown as { __printCalls: number }).__printCalls = 0;
+      window.print = () => {
+        (window as unknown as { __printCalls: number }).__printCalls += 1;
+      };
+    });
+    await saveProfileWithoutGstin(page);
+    await open(page, "/invoices/new");
+    // ₹1,000 at 18% intra-state → CGST ₹90 + SGST ₹90 → ₹1,180, exactly as with a GSTIN.
+    await fillInvoice(page, { price: "1000", rate: "18" });
+    const gstin = page.getByLabel(/^GSTIN/);
+    await expect(gstin).toHaveValue("");
+    await expect(page.locator('label[for="doc-seller-gstin"]')).toContainText("(optional)");
+    await gstin.blur();
+    await expect(page.getByText(/GSTIN is required/)).toHaveCount(0);
+
+    await page.getByRole("button", { name: "Print / Save as PDF" }).click();
+    await expect(page.getByRole("alert").filter({ hasText: "before printing" })).toHaveCount(0);
+    expect(
+      await page.evaluate(() => (window as unknown as { __printCalls: number }).__printCalls),
+    ).toBe(1);
+
+    await page.emulateMedia({ media: "print" });
+    const doc = preview(page);
+    await expect(doc).toBeVisible();
+    await expect(doc.getByRole("heading", { level: 2 })).toHaveText("Tax Invoice");
+    await expect(doc.getByTestId("preview-company")).toContainText("Sample Design Studio");
+    await expect(doc).not.toContainText("GSTIN");
+    await expect(doc.getByTestId("preview-cgst")).toHaveText("₹90.00");
+    await expect(doc.getByTestId("preview-sgst")).toHaveText("₹90.00");
+    await expect(doc.getByTestId("preview-grand-total")).toHaveText("₹1,180.00");
+    await expect(doc.getByTestId("preview-non-gst-note")).toHaveCount(0);
+  });
+
+  test("an entered GSTIN is still checked on the invoice", async ({ page }) => {
+    await saveProfileWithoutGstin(page);
+    await open(page, "/invoices/new");
+    await fillInvoice(page, { price: "1000", rate: "18" });
+    const gstin = page.getByLabel(/^GSTIN/);
+    await gstin.fill("12345");
+    await gstin.blur();
+    await expect(page.getByText("GSTIN must be exactly 15 characters.")).toBeVisible();
+    await gstin.fill("27AAPFU0939F1ZA");
+    await expect(page.getByText(/check character does not match/)).toBeVisible();
+    await gstin.fill("27AAPFU0939F1ZV");
+    await expect(page.getByText(/check character does not match/)).toHaveCount(0);
+    await showPreview(page);
+    await expect(preview(page).getByTestId("preview-company")).toContainText(
+      "GSTIN: 27AAPFU0939F1ZV",
+    );
+  });
+});

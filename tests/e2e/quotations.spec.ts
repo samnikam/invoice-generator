@@ -153,7 +153,7 @@ test.describe("quotation generator", () => {
 
   test("without GST: no tax, no GST fields, and a clear note", async ({ page }) => {
     await fillBasics(page, "Quotation without GST");
-    await expect(page.getByLabel("GSTIN", { exact: true })).toHaveCount(0);
+    await expect(page.getByLabel(/^GSTIN/)).toHaveCount(0);
     await expect(page.getByTestId("provisional-rate-notice")).toHaveCount(0);
     // 3 × ₹1,999.99 = ₹5,999.97
     await fillItem(page, 0, {
