@@ -113,7 +113,7 @@ export default function HomePage() {
             <div className="mt-8 flex flex-col gap-3 sm:flex-row">
               <Button asChild size="xl" className="shadow-lg shadow-primary/25">
                 <Link href="/dashboard">
-                  Open workspace
+                  Start free demo
                   <ArrowRight data-icon="inline-end" />
                 </Link>
               </Button>
@@ -284,7 +284,7 @@ export default function HomePage() {
               className="shrink-0 bg-card text-primary shadow-lg hover:bg-card/90"
             >
               <Link href="/dashboard">
-                Open workspace
+                Start free demo
                 <ArrowRight data-icon="inline-end" />
               </Link>
             </Button>

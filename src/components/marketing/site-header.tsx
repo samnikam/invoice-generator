@@ -31,7 +31,7 @@ export function SiteHeader() {
             className="hidden rounded-full px-5 shadow-md shadow-primary/20 sm:inline-flex"
           >
             <Link href="/dashboard">
-              Open workspace
+              Start free demo
               <ArrowRight data-icon="inline-end" />
             </Link>
           </Button>

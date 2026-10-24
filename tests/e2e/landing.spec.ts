@@ -43,7 +43,7 @@ test.describe("landing page", () => {
   });
 
   test("primary call to action opens the workspace", async ({ page }) => {
-    await page.getByRole("main").getByRole("link", { name: "Open workspace" }).first().click();
+    await page.getByRole("main").getByRole("link", { name: "Start free demo" }).first().click();
     await expect(page).toHaveURL(/\/dashboard$/);
     await expect(page.getByRole("heading", { level: 1 })).toContainText("Welcome to SmartBill");
   });

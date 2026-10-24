@@ -55,7 +55,7 @@ export function MarketingMobileNav() {
           <SheetClose asChild>
             <Button asChild size="xl" className="w-full">
               <Link href="/dashboard">
-                Open workspace
+                Start free demo
                 <ArrowRight data-icon="inline-end" />
               </Link>
             </Button>
