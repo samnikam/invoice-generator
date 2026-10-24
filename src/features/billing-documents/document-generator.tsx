@@ -5,6 +5,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { DocumentWorkspace } from "@/components/documents/document-workspace";
 import { DraftPanel } from "@/components/documents/draft-panel";
 import { ErrorSummary } from "@/components/documents/error-summary";
+import { useSaveToHistory } from "@/components/history/save-to-history";
 import { FormSection, sectionHeadingId } from "@/components/documents/form-section";
 import { useDocumentForm } from "@/components/documents/use-document-form";
 import { clearFormMessage, useLocalDraft } from "@/components/documents/use-local-draft";
@@ -62,8 +63,19 @@ export function BillingDocumentGenerator({ kind }: { kind: BillingDocumentKind }
 
   const evaluation = useMemo(() => evaluateDocument(values), [values]);
   const ready = evaluation.issues.length === 0 && evaluation.totals !== null;
-  const { touch, errorFor, showSummary, summaryRef, view, setView, print, resetInteraction } =
-    useDocumentForm(evaluation.errors, ready);
+  const {
+    touch,
+    errorFor,
+    showSummary,
+    summaryAction,
+    summaryRef,
+    view,
+    setView,
+    print,
+    requireReady,
+    resetInteraction,
+  } = useDocumentForm(evaluation.errors, ready);
+  const history = useSaveToHistory({ kind: values.kind, values }, requireReady);
   const withGst = values.gstMode === "with-gst";
 
   // Default the issue date to today in the user's own time zone (browser only).
@@ -224,7 +236,12 @@ export function BillingDocumentGenerator({ kind }: { kind: BillingDocumentKind }
       aria-label={`${config.Noun} details`}
     >
       {showSummary ? (
-        <ErrorSummary ref={summaryRef} issues={evaluation.issues} domId={fieldDomId} />
+        <ErrorSummary
+          ref={summaryRef}
+          issues={evaluation.issues}
+          domId={fieldDomId}
+          action={summaryAction}
+        />
       ) : null}
 
       <FormSection title={config.typeLabel}>
@@ -502,6 +519,8 @@ export function BillingDocumentGenerator({ kind }: { kind: BillingDocumentKind }
       onViewChange={setView}
       onClear={clearForm}
       onPrint={() => print(`${config.Noun} ${values.documentNumber.trim()}`)}
+      onSaveToHistory={history.save}
+      historyStatus={history.status}
       draftPanel={<DraftPanel draft={draft} documentNoun={config.noun} />}
       form={formContent}
       preview={

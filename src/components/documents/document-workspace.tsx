@@ -1,13 +1,14 @@
 "use client";
 
 import type { ReactNode } from "react";
-import { Eraser, Info, Printer } from "lucide-react";
+import { Archive, Eraser, Info, Printer } from "lucide-react";
 import { cn } from "cn";
 
 import { Button } from "@/components/ui/button";
 
 /**
- * Page frame shared by the document generators: title, Clear / Print actions, the
+ * Page frame shared by the document generators: title, Clear / Save to history / Print
+ * actions, the
  * draft-saving panel, and the form + live preview. Below 1536px wide, an "Edit details / Preview"
  * switch shows one at a time; wider screens show both side by side.
  *
@@ -22,6 +23,8 @@ export function DocumentWorkspace({
   onViewChange,
   onClear,
   onPrint,
+  onSaveToHistory,
+  historyStatus,
   draftPanel,
   form,
   preview,
@@ -34,6 +37,10 @@ export function DocumentWorkspace({
   onViewChange: (view: "edit" | "preview") => void;
   onClear: () => void;
   onPrint: () => void;
+  /** Saves a snapshot of the finished document to the browser-local history. */
+  onSaveToHistory: () => void;
+  /** Result of the last "Save to history" (see useSaveToHistory). */
+  historyStatus: ReactNode;
   /** Draft-saving control (see DraftPanel). */
   draftPanel: ReactNode;
   form: ReactNode;
@@ -51,12 +58,18 @@ export function DocumentWorkspace({
             <Eraser data-icon="inline-start" />
             Clear form
           </Button>
+          <Button type="button" variant="outline" size="lg" onClick={onSaveToHistory}>
+            <Archive data-icon="inline-start" />
+            Save to history
+          </Button>
           <Button type="button" size="lg" onClick={onPrint}>
             <Printer data-icon="inline-start" />
             Print / Save as PDF
           </Button>
         </div>
       </div>
+
+      {historyStatus}
 
       {draftPanel}
 

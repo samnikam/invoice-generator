@@ -1,4 +1,4 @@
-import { Building2, LayoutDashboard } from "lucide-react";
+import { Building2, History, LayoutDashboard } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 
 import { features } from "@/config/features";
@@ -37,7 +37,12 @@ export const appNav: AppNavGroup[] = [
   { items: [{ title: "Dashboard", icon: LayoutDashboard, href: "/dashboard" }] },
   {
     label: "Documents",
-    items: [featureNavItem("invoices"), featureNavItem("quotations"), featureNavItem("receipts")],
+    items: [
+      featureNavItem("invoices"),
+      featureNavItem("quotations"),
+      featureNavItem("receipts"),
+      { title: "History", icon: History, href: "/history" },
+    ],
   },
   { label: "Tools", items: [featureNavItem("calculators")] },
   {
