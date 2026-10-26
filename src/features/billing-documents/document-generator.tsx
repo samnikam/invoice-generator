@@ -52,6 +52,12 @@ import { LineItemsEditor } from "./line-items-editor";
 
 type Section = "seller" | "customer";
 
+/**
+ * Official GST portal "Search Taxpayer" page. Opened in a new tab for the user to look up a
+ * GSTIN themselves; SmartBill never sends any data to it (fixed URL, no query string).
+ */
+const GST_PORTAL_SEARCH_URL = "https://services.gst.gov.in/services/searchtp";
+
 const NOTES_PLACEHOLDERS: Record<BillingDocumentKind, { notes: string; terms: string }> = {
   invoice: {
     notes: "e.g. Bank account, UPI ID, or a thank-you note",
@@ -457,6 +463,16 @@ export function BillingDocumentGenerator({ kind }: { kind: BillingDocumentKind }
             ) : undefined,
           },
         )}
+        <a
+          href={GST_PORTAL_SEARCH_URL}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="inline-flex items-center gap-1.5 text-sm font-medium text-primary underline-offset-2 hover:underline print:hidden"
+          data-testid="gst-portal-link"
+        >
+          Look up GSTIN on the official GST Portal <span aria-hidden="true">↗</span>
+          <span className="sr-only"> (opens in a new tab)</span>
+        </a>
       </FormSection>
 
       <FormSection title={`${config.Noun} details`}>
