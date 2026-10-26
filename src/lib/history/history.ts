@@ -129,7 +129,10 @@ const digitsOnly = (value: string) => value.replace(/\D/g, "");
  * case and extra spaces), or — when the search contains at least 3 digits — part of the
  * customer's mobile number (ignoring spaces, dashes and a +91 prefix).
  */
-export function matchesSearch(summary: HistorySummary, query: string): boolean {
+export function matchesSearch(
+  summary: Pick<HistorySummary, "customerName" | "customerPhone">,
+  query: string,
+): boolean {
   const q = query.trim().toLowerCase().replace(/\s+/g, " ");
   if (q === "") return true;
   if (summary.customerName.toLowerCase().replace(/\s+/g, " ").includes(q)) return true;

@@ -23,6 +23,9 @@ import { useSavedProfile } from "@/components/profile/use-saved-profile";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { todayIsoDate } from "@/lib/dates";
+import { placeOfSupplySuggestion } from "@/lib/documents/place-of-supply-suggestion";
+import type { PastCustomer } from "@/lib/history/past-customers";
+import { panFromGstin } from "@/lib/tax/gstin-pan";
 import {
   createEmptyDocument,
   createEmptyLine,
@@ -43,6 +46,8 @@ import { readLogo, readProfile } from "@/lib/profile/profile-storage";
 
 import { DocumentPreview } from "./document-preview";
 import { InvoiceDocument } from "./invoice-document";
+import { PastCustomerFinder } from "./past-customer-finder";
+import { PlaceOfSupplyHint } from "./place-of-supply-hint";
 import { LineItemsEditor } from "./line-items-editor";
 
 type Section = "seller" | "customer";
@@ -82,6 +87,55 @@ export function BillingDocumentGenerator({ kind }: { kind: BillingDocumentKind }
   } = useDocumentForm(evaluation.errors, ready);
   const history = useSaveToHistory({ kind: values.kind, values }, requireReady);
   const withGst = values.gstMode === "with-gst";
+
+  // Place-of-supply suggestion from the customer's GSTIN (screen only, never saved). The
+  // user can dismiss it for a GSTIN; it never changes the place of supply by itself.
+  const [dismissedSuggestionFor, setDismissedSuggestionFor] = useState("");
+  const customerGstinKey = values.customer.gstin.trim().toUpperCase();
+  const gstinSuggestion = withGst
+    ? placeOfSupplySuggestion(values.customer.gstin, values.placeOfSupply)
+    : null;
+  const posSuggestion =
+    gstinSuggestion?.kind === "suggest" && dismissedSuggestionFor === customerGstinKey
+      ? null
+      : gstinSuggestion;
+  const focusPlaceOfSupply = () =>
+    requestAnimationFrame(() => document.getElementById(fieldDomId("placeOfSupply"))?.focus());
+
+  // PAN read from a valid customer GSTIN: shown on screen only, never stored or printed.
+  const customerPan = panFromGstin(values.customer.gstin);
+
+  /** Fills the customer fields from a past customer the user chose. Nothing else changes. */
+  function applyPastCustomer(customer: PastCustomer): boolean {
+    const current = values.customer;
+    const hasDetails = [
+      current.name,
+      current.address,
+      current.phone,
+      current.email,
+      current.gstin,
+    ].some((v) => v.trim() !== "");
+    if (
+      hasDetails &&
+      !window.confirm(
+        `Replace the customer details in this ${config.noun} with “${customer.name}” from your saved documents? Items, place of supply and other details are not changed.`,
+      )
+    ) {
+      return false;
+    }
+    setValues((v) => ({
+      ...v,
+      customer: {
+        name: customer.name,
+        address: customer.address,
+        phone: customer.phone,
+        email: customer.email,
+        gstin: customer.gstin,
+      },
+    }));
+    requestAnimationFrame(() => document.getElementById(fieldDomId("customer.name"))?.focus());
+    return true;
+  }
 
   // Default the issue date to today in the user's own time zone (browser only).
   useEffect(() => {
@@ -164,6 +218,7 @@ export function BillingDocumentGenerator({ kind }: { kind: BillingDocumentKind }
     nextLineId.current = 2;
     setValues({ ...createEmptyDocument(kind), issueDate: todayIsoDate() });
     setFilledFromProfile(false);
+    setDismissedSuggestionFor("");
     resetInteraction();
   }
 
@@ -194,6 +249,7 @@ export function BillingDocumentGenerator({ kind }: { kind: BillingDocumentKind }
     nextLineId.current = 2;
     setValues(fresh.values);
     setFilledFromProfile(fresh.fromProfile);
+    setDismissedSuggestionFor("");
     resetInteraction();
     setView("edit");
   });
@@ -382,13 +438,24 @@ export function BillingDocumentGenerator({ kind }: { kind: BillingDocumentKind }
       </FormSection>
 
       <FormSection title="Customer">
+        <PastCustomerFinder documentNoun={config.noun} onSelect={applyPastCustomer} />
         {partyFields("customer")}
         {text(
           "customer.gstin",
           "Customer GSTIN",
           values.customer.gstin,
           (v) => setParty("customer", "gstin", v),
-          { optional: true, placeholder: "If the customer is GST-registered" },
+          {
+            optional: true,
+            placeholder: "If the customer is GST-registered",
+            hint: customerPan ? (
+              <span data-testid="customer-pan">
+                PAN (from GSTIN):{" "}
+                <span className="font-mono font-medium text-foreground">{customerPan}</span> — shown
+                here only, not saved or printed.
+              </span>
+            ) : undefined,
+          },
         )}
       </FormSection>
 
@@ -433,6 +500,18 @@ export function BillingDocumentGenerator({ kind }: { kind: BillingDocumentKind }
                 />
               )}
             </FormField>
+            <PlaceOfSupplyHint
+              suggestion={posSuggestion}
+              onUse={(stateCode) => {
+                set("placeOfSupply", stateCode);
+                touch("placeOfSupply");
+                focusPlaceOfSupply();
+              }}
+              onDismiss={() => {
+                setDismissedSuggestionFor(customerGstinKey);
+                focusPlaceOfSupply();
+              }}
+            />
             <div className="flex items-start gap-2.5">
               <input
                 id="doc-sez"
